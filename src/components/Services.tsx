@@ -14,7 +14,7 @@ import {
 const Services = () => {
   const handleWhatsAppClick = (service: string) => {
     const message = `Halo! Saya tertarik dengan layanan ${service}. Bisa tolong dijelaskan lebih detail?`;
-    const phoneNumber = "6281234567890"; // Ganti dengan nomor WhatsApp Anda
+    const phoneNumber = "6285156371696"; // Nomor WhatsApp CrxaNode
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };

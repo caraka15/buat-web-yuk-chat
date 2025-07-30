@@ -5,7 +5,7 @@ import heroImage from "@/assets/hero-image.jpg";
 const Hero = () => {
   const handleWhatsAppClick = () => {
     const message = "Halo! Saya ingin mengetahui lebih lanjut tentang layanan pembuatan website dan bot otomatis.";
-    const phoneNumber = "6281234567890"; // Ganti dengan nomor WhatsApp Anda
+    const phoneNumber = "6285156371696"; // Nomor WhatsApp CrxaNode
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };

@@ -7,7 +7,7 @@ const Navigation = () => {
 
   const handleWhatsAppClick = () => {
     const message = "Halo! Saya ingin mengetahui lebih lanjut tentang layanan Anda.";
-    const phoneNumber = "6281234567890"; // Ganti dengan nomor WhatsApp Anda
+    const phoneNumber = "6285156371696"; // Nomor WhatsApp CrxaNode
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -25,7 +25,7 @@ const Navigation = () => {
           {/* Logo */}
           <div className="flex items-center">
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              WebBot.ID
+              CrxaNode.xyz
             </span>
           </div>
 

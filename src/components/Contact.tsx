@@ -5,7 +5,7 @@ import { MessageCircle, Phone, Mail, Clock, MapPin } from "lucide-react";
 const Contact = () => {
   const handleWhatsAppClick = () => {
     const message = "Halo! Saya ingin berkonsultasi tentang layanan digital Anda.";
-    const phoneNumber = "6281234567890"; // Ganti dengan nomor WhatsApp Anda
+    const phoneNumber = "6285156371696"; // Nomor WhatsApp CrxaNode
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -14,14 +14,14 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Telepon",
-      value: "+62 812-3456-7890",
-      action: () => window.open("tel:+6281234567890")
+      value: "+62 851-5637-1696",
+      action: () => window.open("tel:+6285156371696")
     },
     {
       icon: Mail,
       title: "Email",
-      value: "info@websitebot.id",
-      action: () => window.open("mailto:info@websitebot.id")
+      value: "admin@crxanode.xyz",
+      action: () => window.open("mailto:admin@crxanode.xyz")
     },
     {
       icon: Clock,
