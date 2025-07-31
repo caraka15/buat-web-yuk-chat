@@ -24,19 +24,22 @@ const Services = () => {
       icon: Globe,
       title: "Website Company Profile",
       description: "Website profesional untuk memperkenalkan perusahaan Anda",
-      features: ["Desain Custom", "Responsive Design", "SEO Optimized", "Admin Panel"]
+      features: ["Desain Custom", "Responsive Design", "SEO Optimized", "Admin Panel"],
+      priceRange: "Rp 2.500.000 - 7.500.000"
     },
     {
       icon: ShoppingCart,
       title: "Website E-commerce",
       description: "Toko online lengkap dengan sistem pembayaran terintegrasi",
-      features: ["Katalog Produk", "Payment Gateway", "Manajemen Order", "Dashboard Admin"]
+      features: ["Katalog Produk", "Payment Gateway", "Manajemen Order", "Dashboard Admin"],
+      priceRange: "Rp 5.000.000 - 15.000.000"
     },
     {
       icon: Smartphone,
       title: "Landing Page",
       description: "Halaman khusus untuk kampanye marketing dan promosi",
-      features: ["Conversion Optimized", "Fast Loading", "Analytics", "A/B Testing Ready"]
+      features: ["Conversion Optimized", "Fast Loading", "Analytics", "A/B Testing Ready"],
+      priceRange: "Rp 1.500.000 - 4.000.000"
     }
   ];
 
@@ -45,19 +48,22 @@ const Services = () => {
       icon: MessageSquare,
       title: "WhatsApp Bot",
       description: "Bot otomatis untuk WhatsApp Business dengan fitur lengkap",
-      features: ["Auto Reply", "Katalog Produk", "Order Management", "Broadcast Message"]
+      features: ["Auto Reply", "Katalog Produk", "Order Management", "Broadcast Message"],
+      priceRange: "Rp 1.000.000 - 5.000.000"
     },
     {
       icon: Bot,
       title: "Telegram Bot",
       description: "Bot Telegram untuk komunitas dan customer service",
-      features: ["Command Handler", "Group Management", "File Sharing", "Notification System"]
+      features: ["Command Handler", "Group Management", "File Sharing", "Notification System"],
+      priceRange: "Rp 800.000 - 3.500.000"
     },
     {
       icon: Zap,
       title: "Custom Bot",
       description: "Bot khusus sesuai kebutuhan bisnis Anda",
-      features: ["API Integration", "Custom Logic", "Multi Platform", "Advanced Analytics"]
+      features: ["API Integration", "Custom Logic", "Multi Platform", "Advanced Analytics"],
+      priceRange: "Rp 2.000.000 - 10.000.000"
     }
   ];
 
@@ -86,23 +92,31 @@ const Services = () => {
                   <h4 className="text-2xl font-bold mb-4">{service.title}</h4>
                   <p className="text-muted-foreground mb-6">{service.description}</p>
                   
-                  <div className="space-y-3 mb-8">
-                    {service.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 text-primary" />
-                        <span className="text-sm">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
+                   <div className="space-y-3 mb-6">
+                     {service.features.map((feature, idx) => (
+                       <div key={idx} className="flex items-center gap-3">
+                         <CheckCircle className="w-5 h-5 text-primary" />
+                         <span className="text-sm">{feature}</span>
+                       </div>
+                     ))}
+                   </div>
 
-                  <Button 
-                    variant="whatsapp" 
-                    className="w-full"
-                    onClick={() => handleWhatsAppClick(service.title)}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Pesan Sekarang
-                  </Button>
+                   <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+                     <p className="text-sm font-semibold text-foreground mb-1">Range Harga:</p>
+                     <p className="text-lg font-bold text-primary">{service.priceRange}</p>
+                     <p className="text-xs text-muted-foreground mt-1">
+                       *Harga dapat berubah sesuai kompleksitas project
+                     </p>
+                   </div>
+
+                   <Button 
+                     variant="whatsapp" 
+                     className="w-full"
+                     onClick={() => handleWhatsAppClick(service.title)}
+                   >
+                     <MessageCircle className="w-4 h-4" />
+                     Pesan Sekarang
+                   </Button>
                 </CardContent>
               </Card>
             ))}
@@ -122,23 +136,31 @@ const Services = () => {
                   <h4 className="text-2xl font-bold mb-4">{service.title}</h4>
                   <p className="text-muted-foreground mb-6">{service.description}</p>
                   
-                  <div className="space-y-3 mb-8">
-                    {service.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 text-primary" />
-                        <span className="text-sm">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
+                   <div className="space-y-3 mb-6">
+                     {service.features.map((feature, idx) => (
+                       <div key={idx} className="flex items-center gap-3">
+                         <CheckCircle className="w-5 h-5 text-primary" />
+                         <span className="text-sm">{feature}</span>
+                       </div>
+                     ))}
+                   </div>
 
-                  <Button 
-                    variant="whatsapp" 
-                    className="w-full"
-                    onClick={() => handleWhatsAppClick(service.title)}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Pesan Sekarang
-                  </Button>
+                   <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+                     <p className="text-sm font-semibold text-foreground mb-1">Range Harga:</p>
+                     <p className="text-lg font-bold text-primary">{service.priceRange}</p>
+                     <p className="text-xs text-muted-foreground mt-1">
+                       *Harga dapat berubah sesuai kompleksitas project
+                     </p>
+                   </div>
+
+                   <Button 
+                     variant="whatsapp" 
+                     className="w-full"
+                     onClick={() => handleWhatsAppClick(service.title)}
+                   >
+                     <MessageCircle className="w-4 h-4" />
+                     Pesan Sekarang
+                   </Button>
                 </CardContent>
               </Card>
             ))}

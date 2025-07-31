@@ -31,9 +31,9 @@ const Contact = () => {
     },
     {
       icon: MapPin,
-      title: "Lokasi",
-      value: "Jakarta, Indonesia",
-      action: null
+      title: "Alamat Bisnis",
+      value: "Jl. Kemang Raya No. 45, Kemang, Jakarta Selatan 12560",
+      action: () => window.open("https://maps.google.com/?q=Jl.+Kemang+Raya+No.+45+Kemang+Jakarta+Selatan")
     }
   ];
 

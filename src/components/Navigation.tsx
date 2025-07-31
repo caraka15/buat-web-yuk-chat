@@ -44,11 +44,23 @@ const Navigation = () => {
               Layanan
             </button>
             <button 
+              onClick={() => scrollToSection('faq')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              FAQ
+            </button>
+            <button 
               onClick={() => scrollToSection('contact')}
               className="text-foreground hover:text-primary transition-colors"
             >
               Kontak
             </button>
+            <a 
+              href="/legal"
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Legal
+            </a>
           </div>
 
           {/* CTA Button */}
@@ -85,11 +97,23 @@ const Navigation = () => {
                 Layanan
               </button>
               <button 
+                onClick={() => scrollToSection('faq')}
+                className="text-left text-foreground hover:text-primary transition-colors py-2"
+              >
+                FAQ
+              </button>
+              <button 
                 onClick={() => scrollToSection('contact')}
                 className="text-left text-foreground hover:text-primary transition-colors py-2"
               >
                 Kontak
               </button>
+              <a 
+                href="/legal"
+                className="text-left text-foreground hover:text-primary transition-colors py-2"
+              >
+                Legal
+              </a>
               <Button variant="whatsapp" onClick={handleWhatsAppClick} className="mt-4">
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
