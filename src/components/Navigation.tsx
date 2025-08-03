@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleWhatsAppClick = () => {
     const message = "Halo! Saya ingin mengetahui lebih lanjut tentang layanan Anda.";
@@ -13,8 +16,16 @@ const Navigation = () => {
   };
 
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    element?.scrollIntoView({ behavior: 'smooth' });
+    if (location.pathname !== '/') {
+      navigate('/', { replace: true });
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        element?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    }
     setIsMenuOpen(false);
   };
 
@@ -55,12 +66,12 @@ const Navigation = () => {
             >
               Kontak
             </button>
-            <a 
-              href="/legal"
+            <button 
+              onClick={() => navigate('/legal')}
               className="text-foreground hover:text-primary transition-colors"
             >
               Legal
-            </a>
+            </button>
           </div>
 
           {/* CTA Button */}
@@ -108,12 +119,12 @@ const Navigation = () => {
               >
                 Kontak
               </button>
-              <a 
-                href="/legal"
+              <button 
+                onClick={() => navigate('/legal')}
                 className="text-left text-foreground hover:text-primary transition-colors py-2"
               >
                 Legal
-              </a>
+              </button>
               <Button variant="whatsapp" onClick={handleWhatsAppClick} className="mt-4">
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
