@@ -75,7 +75,13 @@ const Navigation = () => {
           </div>
 
           {/* CTA Button */}
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/auth')}
+            >
+              Masuk
+            </Button>
             <Button variant="whatsapp" onClick={handleWhatsAppClick}>
               <MessageCircle className="w-4 h-4" />
               WhatsApp
@@ -125,7 +131,14 @@ const Navigation = () => {
               >
                 Legal
               </button>
-              <Button variant="whatsapp" onClick={handleWhatsAppClick} className="mt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/auth')}
+                className="mt-4"
+              >
+                Masuk
+              </Button>
+              <Button variant="whatsapp" onClick={handleWhatsAppClick}>
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
               </Button>
