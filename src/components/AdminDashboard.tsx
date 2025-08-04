@@ -23,7 +23,7 @@ const AdminDashboard = () => {
       service_type: 'website',
       description: 'Website toko online untuk bisnis fashion dengan fitur cart, payment gateway, dan admin panel',
       budget: 5000000,
-      status: 'pending_approval',
+      status: 'pending_dp_payment', // User belum bayar DP
       created_at: '2024-01-15T10:00:00Z',
       deposit_paid: false
     },
@@ -33,7 +33,7 @@ const AdminDashboard = () => {
       service_type: 'whatsapp_bot',
       description: 'Bot WhatsApp untuk customer service otomatis dengan integrasi database',
       budget: 2000000,
-      status: 'approved',
+      status: 'pending_approval', // User sudah bayar DP, menunggu approval admin
       created_at: '2024-01-10T14:30:00Z',
       deposit_paid: true
     },
@@ -43,17 +43,28 @@ const AdminDashboard = () => {
       service_type: 'ecommerce',
       description: 'Marketplace multi-vendor dengan sistem komisi',
       budget: 8000000,
-      status: 'in_progress',
+      status: 'approved', // Admin sudah approve, sedang dikerjakan
       created_at: '2024-01-05T09:15:00Z',
+      deposit_paid: true
+    },
+    {
+      id: 'ORD-004',
+      user_email: 'user4@example.com',
+      service_type: 'landing_page',
+      description: 'Landing page untuk produk startup dengan animasi modern',
+      budget: 1500000,
+      status: 'demo_ready', // Demo sudah siap, user bisa bayar sisa
+      created_at: '2024-01-03T09:15:00Z',
       deposit_paid: true,
-      demo_link: 'https://demo.example.com/ord-003'
+      demo_link: 'https://demo.example.com/ord-004'
     }
   ];
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
+      'pending_dp_payment': { label: 'Belum Bayar DP', variant: 'destructive' as const },
       'pending_approval': { label: 'Menunggu Persetujuan', variant: 'secondary' as const },
-      'approved': { label: 'Disetujui', variant: 'default' as const },
+      'approved': { label: 'Disetujui - Dikerjakan', variant: 'default' as const },
       'in_progress': { label: 'Sedang Dikerjakan', variant: 'outline' as const },
       'demo_ready': { label: 'Demo Siap', variant: 'default' as const },
       'completed': { label: 'Selesai', variant: 'default' as const }

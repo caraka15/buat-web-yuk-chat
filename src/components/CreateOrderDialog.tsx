@@ -12,9 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 interface CreateOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOrderCreated?: (order: any) => void;
 }
 
-const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChange }) => {
+const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChange, onOrderCreated }) => {
   const [serviceType, setServiceType] = useState<string>('');
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('');
@@ -73,15 +74,31 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Create mock order object
+      const newOrder = {
+        id: `ORD-${Date.now()}`,
+        service_type: serviceType,
+        description,
+        budget: budgetNumber,
+        status: 'pending_dp_payment',
+        created_at: new Date().toISOString(),
+        deposit_paid: false
+      };
+      
       toast({
         title: 'Berhasil',
-        description: 'Pesanan berhasil dibuat! Tunggu persetujuan admin.',
+        description: 'Pesanan berhasil dibuat! Silakan lakukan pembayaran DP.',
       });
       
       onOpenChange(false);
       setServiceType('');
       setDescription('');
       setBudget('');
+      
+      // Trigger payment dialog
+      if (onOrderCreated) {
+        onOrderCreated(newOrder);
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -99,7 +116,7 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
         <DialogHeader>
           <DialogTitle>Buat Pesanan Baru</DialogTitle>
           <DialogDescription>
-            Isi detail pesanan Anda. Admin akan meninjau dan memberikan persetujuan.
+            Isi detail pesanan Anda. Setelah dibuat, Anda akan langsung diarahkan untuk pembayaran DP.
           </DialogDescription>
         </DialogHeader>
         
