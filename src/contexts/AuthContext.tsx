@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAdminStatus = async (userId: string) => {
     try {
       // For now, check if user is admin by email since tables might not be ready
-      setIsAdmin(user?.email === 'caraka@crxanode.xyz');
+      setIsAdmin(user?.email === 'carakawidi07@gmail.com');
     } catch (error) {
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
