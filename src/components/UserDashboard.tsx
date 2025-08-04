@@ -5,10 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { LogOut, Plus, MessageCircle, ExternalLink } from 'lucide-react';
 import CreateOrderDialog from '@/components/CreateOrderDialog';
+import PaymentDialog from '@/components/PaymentDialog';
 
 const UserDashboard = () => {
   const { user, signOut } = useAuth();
   const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<{
+    open: boolean;
+    order?: any;
+    type?: 'dp' | 'full';
+  }>({ open: false });
 
   const mockOrders = [
     {
@@ -120,7 +126,14 @@ const UserDashboard = () => {
                     
                     <div className="flex flex-wrap gap-2">
                       {order.status === 'approved' && !order.deposit_paid && (
-                        <Button size="sm">
+                        <Button 
+                          size="sm"
+                          onClick={() => setPaymentDialog({
+                            open: true,
+                            order,
+                            type: 'dp'
+                          })}
+                        >
                           Bayar DP (10%)
                         </Button>
                       )}
@@ -148,7 +161,14 @@ const UserDashboard = () => {
                       )}
                       
                       {order.status === 'demo_ready' && (
-                        <Button size="sm">
+                        <Button 
+                          size="sm"
+                          onClick={() => setPaymentDialog({
+                            open: true,
+                            order,
+                            type: 'full'
+                          })}
+                        >
                           Bayar Sisa (90%)
                         </Button>
                       )}
@@ -165,6 +185,15 @@ const UserDashboard = () => {
         open={showCreateOrder} 
         onOpenChange={setShowCreateOrder}
       />
+      
+      {paymentDialog.open && paymentDialog.order && (
+        <PaymentDialog
+          open={paymentDialog.open}
+          onOpenChange={(open) => setPaymentDialog({ open })}
+          order={paymentDialog.order}
+          paymentType={paymentDialog.type || 'dp'}
+        />
+      )}
     </div>
   );
 };

@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreateOrderDialogProps {
   open: boolean;
@@ -18,6 +20,7 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
   const [budget, setBudget] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const serviceOptions = [
     { value: 'website', label: 'Pembuatan Website', minBudget: 1000000, maxBudget: 10000000 },
@@ -55,8 +58,20 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
     setLoading(true);
 
     try {
-      // TODO: Implement order creation with Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // For now, simulate order creation since database might not be ready
+      // TODO: Replace with actual Supabase call when database is ready
+      // const { error } = await supabase
+      //   .from('orders')
+      //   .insert({
+      //     user_id: user?.id,
+      //     service_type: serviceType,
+      //     description,
+      //     budget: budgetNumber,
+      //     status: 'pending_approval'
+      //   });
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
         title: 'Berhasil',
@@ -67,7 +82,7 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
       setServiceType('');
       setDescription('');
       setBudget('');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: 'Gagal membuat pesanan. Silakan coba lagi.',
