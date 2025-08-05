@@ -44,37 +44,40 @@ Deno.serve(async (req) => {
       throw new Error('iPaymu credentials not found')
     }
 
-    // Create payment data for iPaymu
-    const paymentData = {
-      name: buyer_name,
-      phone: buyer_phone,
-      email: buyer_email,
-      amount: amount,
-      notifyUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-callback`,
-      expired: 24, // 24 hours
-      expiredType: "hours",
-      comments: `Payment for order ${order_id} - ${payment_type}`,
-      referenceId: `${order_id}-${payment_type}-${Date.now()}`,
-      paymentMethod: "va",
-      paymentChannel: "bca"
-    }
+    // Create form data for iPaymu
+    const formData = new FormData()
+    formData.append('product[]', 'Digital Service')
+    formData.append('qty[]', '1')
+    formData.append('price[]', amount.toString())
+    formData.append('description[]', `Payment for order ${order_id} - ${payment_type}`)
+    formData.append('returnUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-return`)
+    formData.append('notifyUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-callback`)
+    formData.append('cancelUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-cancel`)
+    formData.append('referenceId', `${order_id}-${payment_type}-${Date.now()}`)
+    formData.append('weight[]', '1')
+    formData.append('dimension[]', '1:1:1')
+    formData.append('buyerName', buyer_name)
+    formData.append('buyerEmail', buyer_email)
+    formData.append('buyerPhone', buyer_phone)
+    formData.append('pickupArea', '80117')
+    formData.append('pickupAddress', 'Jakarta')
 
     // Generate signature for iPaymu
-    const body = JSON.stringify(paymentData)
-    const requestBody = btoa(body)
+    const bodyString = [...formData.entries()].map(([key, value]) => `${key}=${value}`).join('&')
+    const requestBody = btoa(bodyString)
     const stringToSign = 'POST:' + va + ':' + requestBody + ':' + apiKey
-    const signature = btoa(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stringToSign)))
+    const signature = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stringToSign))
+      .then(buffer => btoa(String.fromCharCode(...new Uint8Array(buffer))))
 
     // Make request to iPaymu
     const response = await fetch('https://sandbox.ipaymu.com/api/v2/payment', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'va': va,
         'signature': signature,
         'timestamp': Date.now().toString()
       },
-      body: requestBody
+      body: formData
     })
 
     const result = await response.json()
@@ -114,7 +117,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         payment_url: result.Data.Url,
-        va_number: result.Data.Via,
+        session_id: result.Data.SessionID,
         amount: amount
       }),
       { 

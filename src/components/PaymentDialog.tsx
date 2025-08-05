@@ -26,13 +26,13 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   order, 
   paymentType 
 }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(user?.user_metadata?.full_name || '');
   const [phone, setPhone] = useState('');
   const [paymentUrl, setPaymentUrl] = useState('');
   const [vaNumber, setVaNumber] = useState('');
-  const { toast } = useToast();
-  const { user } = useAuth();
 
   const amount = paymentType === 'dp' 
     ? Math.round(order.budget * 0.1) // 10% DP
@@ -69,9 +69,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         throw new Error(error.message);
       }
 
-      if (data.success) {
+      if (data?.payment_url) {
         setPaymentUrl(data.payment_url);
-        setVaNumber(data.va_number);
+        setVaNumber(data.session_id);
         
         toast({
           title: 'Pembayaran Dibuat',

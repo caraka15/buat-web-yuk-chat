@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { LogOut, Plus, MessageCircle, ExternalLink } from 'lucide-react';
 import CreateOrderDialog from '@/components/CreateOrderDialog';
 import PaymentDialog from '@/components/PaymentDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserDashboard = () => {
   const { user, signOut } = useAuth();
@@ -15,46 +16,11 @@ const UserDashboard = () => {
     order?: any;
     type?: 'dp' | 'full';
   }>({ open: false });
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const mockOrders = [
-    {
-      id: 'ORD-001',
-      service_type: 'website',
-      description: 'Website toko online untuk bisnis fashion',
-      budget: 5000000,
-      status: 'pending_dp_payment', // User belum bayar DP
-      created_at: '2024-01-15T10:00:00Z',
-      deposit_paid: false
-    },
-    {
-      id: 'ORD-002', 
-      service_type: 'whatsapp_bot',
-      description: 'Bot WhatsApp untuk customer service',
-      budget: 2000000,
-      status: 'pending_approval', // User sudah bayar DP, menunggu approval admin
-      created_at: '2024-01-10T14:30:00Z',
-      deposit_paid: true
-    },
-    {
-      id: 'ORD-003', 
-      service_type: 'ecommerce',
-      description: 'Website e-commerce dengan payment gateway',
-      budget: 8000000,
-      status: 'approved', // Admin sudah approve, kerja dimulai
-      created_at: '2024-01-08T14:30:00Z',
-      deposit_paid: true
-    },
-    {
-      id: 'ORD-004', 
-      service_type: 'landing_page',
-      description: 'Landing page untuk produk startup',
-      budget: 1500000,
-      status: 'demo_ready', // Demo sudah siap, user bisa bayar sisa
-      created_at: '2024-01-05T14:30:00Z',
-      deposit_paid: true,
-      demo_link: 'https://demo.example.com'
-    }
-  ];
+  // For now using mock data until database is ready
+  // const mockOrders = [];
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -69,7 +35,8 @@ const UserDashboard = () => {
   };
 
   const handleOrderCreated = (newOrder: any) => {
-    // Immediately open payment dialog for DP
+    // Add new order to state and immediately open payment dialog for DP
+    setOrders(prev => [newOrder, ...prev]);
     setPaymentDialog({
       open: true,
       order: newOrder,
@@ -109,7 +76,7 @@ const UserDashboard = () => {
           <h2 className="text-2xl font-semibold">Pesanan Saya</h2>
         </div>
 
-        {mockOrders.length === 0 ? (
+        {orders.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <p className="text-muted-foreground mb-4">Belum ada pesanan</p>
@@ -121,7 +88,7 @@ const UserDashboard = () => {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {mockOrders.map((order) => {
+            {orders.map((order) => {
               const statusInfo = getStatusBadge(order.status);
               
               return (
