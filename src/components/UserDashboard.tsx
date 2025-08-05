@@ -7,6 +7,7 @@ import { LogOut, Plus, MessageCircle, ExternalLink } from 'lucide-react';
 import CreateOrderDialog from '@/components/CreateOrderDialog';
 import PaymentDialog from '@/components/PaymentDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const UserDashboard = () => {
   const { user, signOut } = useAuth();
@@ -17,10 +18,38 @@ const UserDashboard = () => {
     type?: 'dp' | 'full';
   }>({ open: false });
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // For now using mock data until database is ready
-  // const mockOrders = [];
+  useEffect(() => {
+    if (user) {
+      fetchUserOrders();
+    }
+  }, [user]);
+
+  const fetchUserOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setOrders(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Gagal memuat pesanan',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusMap = {

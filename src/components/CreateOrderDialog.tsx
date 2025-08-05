@@ -59,31 +59,22 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
     setLoading(true);
 
     try {
-      // For now, simulate order creation since database might not be ready
-      // TODO: Replace with actual Supabase call when database is ready
-      // const { error } = await supabase
-      //   .from('orders')
-      //   .insert({
-      //     user_id: user?.id,
-      //     service_type: serviceType,
-      //     description,
-      //     budget: budgetNumber,
-      //     status: 'pending_approval'
-      //   });
+      // Create order in database
+      const { data: newOrder, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user?.id,
+          service_type: serviceType,
+          description,
+          budget: budgetNumber,
+          status: 'pending_dp_payment'
+        })
+        .select()
+        .single();
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create mock order object
-      const newOrder = {
-        id: `ORD-${Date.now()}`,
-        service_type: serviceType,
-        description,
-        budget: budgetNumber,
-        status: 'pending_dp_payment',
-        created_at: new Date().toISOString(),
-        deposit_paid: false
-      };
+      if (error) {
+        throw new Error(error.message);
+      }
       
       toast({
         title: 'Berhasil',

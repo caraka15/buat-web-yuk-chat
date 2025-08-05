@@ -46,13 +46,13 @@ Deno.serve(async (req) => {
 
     // Create form data for iPaymu
     const formData = new FormData()
-    formData.append('product[]', 'Digital Service')
+    formData.append('product[]', `Payment for order ${order_id}`)
     formData.append('qty[]', '1')
     formData.append('price[]', amount.toString())
-    formData.append('description[]', `Payment for order ${order_id} - ${payment_type}`)
-    formData.append('returnUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-return`)
+    formData.append('description[]', `${payment_type === 'dp' ? 'DP Payment' : 'Final Payment'} for order ${order_id}`)
+    formData.append('returnUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-callback`)
     formData.append('notifyUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-callback`)
-    formData.append('cancelUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-cancel`)
+    formData.append('cancelUrl', `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-callback`)
     formData.append('referenceId', `${order_id}-${payment_type}-${Date.now()}`)
     formData.append('weight[]', '1')
     formData.append('dimension[]', '1:1:1')
@@ -63,11 +63,9 @@ Deno.serve(async (req) => {
     formData.append('pickupAddress', 'Jakarta')
 
     // Generate signature for iPaymu
-    const bodyString = [...formData.entries()].map(([key, value]) => `${key}=${value}`).join('&')
-    const requestBody = btoa(bodyString)
-    const stringToSign = 'POST:' + va + ':' + requestBody + ':' + apiKey
-    const signature = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stringToSign))
-      .then(buffer => btoa(String.fromCharCode(...new Uint8Array(buffer))))
+    const timestamp = Date.now().toString()
+    const stringToSign = 'POST:' + va + ':' + formData.toString() + ':' + apiKey
+    const signature = btoa(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stringToSign)))
 
     // Make request to iPaymu
     const response = await fetch('https://sandbox.ipaymu.com/api/v2/payment', {
@@ -75,7 +73,7 @@ Deno.serve(async (req) => {
       headers: {
         'va': va,
         'signature': signature,
-        'timestamp': Date.now().toString()
+        'timestamp': timestamp
       },
       body: formData
     })
@@ -94,9 +92,9 @@ Deno.serve(async (req) => {
         payment_type,
         amount,
         ipaymu_session_id: result.Data.SessionID,
-        ipaymu_transaction_id: result.Data.TransactionId,
+        ipaymu_transaction_id: result.Data.TransactionId || result.Data.SessionID,
         payment_url: result.Data.Url,
-        va_number: result.Data.Via,
+        va_number: result.Data.Via || '',
         status: 'pending'
       })
 
@@ -117,7 +115,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         payment_url: result.Data.Url,
-        session_id: result.Data.SessionID,
+        va_number: result.Data.Via || '',
         amount: amount
       }),
       { 

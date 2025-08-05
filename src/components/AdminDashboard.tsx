@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { LogOut, Check, X, ExternalLink, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
@@ -15,50 +16,42 @@ const AdminDashboard = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [demoLink, setDemoLink] = useState('');
   const [finalLink, setFinalLink] = useState('');
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockOrders = [
-    {
-      id: 'ORD-001',
-      user_email: 'customer@example.com',
-      service_type: 'website',
-      description: 'Website toko online untuk bisnis fashion dengan fitur cart, payment gateway, dan admin panel',
-      budget: 5000000,
-      status: 'pending_dp_payment', // User belum bayar DP
-      created_at: '2024-01-15T10:00:00Z',
-      deposit_paid: false
-    },
-    {
-      id: 'ORD-002',
-      user_email: 'user2@example.com', 
-      service_type: 'whatsapp_bot',
-      description: 'Bot WhatsApp untuk customer service otomatis dengan integrasi database',
-      budget: 2000000,
-      status: 'pending_approval', // User sudah bayar DP, menunggu approval admin
-      created_at: '2024-01-10T14:30:00Z',
-      deposit_paid: true
-    },
-    {
-      id: 'ORD-003',
-      user_email: 'user3@example.com',
-      service_type: 'ecommerce',
-      description: 'Marketplace multi-vendor dengan sistem komisi',
-      budget: 8000000,
-      status: 'approved', // Admin sudah approve, sedang dikerjakan
-      created_at: '2024-01-05T09:15:00Z',
-      deposit_paid: true
-    },
-    {
-      id: 'ORD-004',
-      user_email: 'user4@example.com',
-      service_type: 'landing_page',
-      description: 'Landing page untuk produk startup dengan animasi modern',
-      budget: 1500000,
-      status: 'demo_ready', // Demo sudah siap, user bisa bayar sisa
-      created_at: '2024-01-03T09:15:00Z',
-      deposit_paid: true,
-      demo_link: 'https://demo.example.com/ord-004'
+  useEffect(() => {
+    fetchAllOrders();
+  }, []);
+
+  const fetchAllOrders = async () => {
+    try {
+      // Get user information separately since we can't join auth.users directly
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (ordersError) {
+        throw ordersError;
+      }
+
+      // For each order, we'll use the user_id as the email for now since we can't access auth.users
+      const ordersWithUserInfo = ordersData?.map(order => ({
+        ...order,
+        user_email: order.user_id // We'll show user_id until we have profiles table
+      })) || [];
+
+      setOrders(ordersWithUserInfo);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Gagal memuat pesanan',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -185,7 +178,7 @@ const AdminDashboard = () => {
             <CardTitle className="text-sm font-medium">Total Pesanan</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockOrders.length}</div>
+            <div className="text-2xl font-bold">{orders.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -194,7 +187,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockOrders.filter(o => o.status === 'pending_approval').length}
+              {orders.filter(o => o.status === 'pending_approval').length}
             </div>
           </CardContent>
         </Card>
@@ -204,7 +197,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockOrders.filter(o => o.status === 'in_progress').length}
+              {orders.filter(o => o.status === 'in_progress').length}
             </div>
           </CardContent>
         </Card>
@@ -214,7 +207,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              Rp {mockOrders.reduce((total, o) => total + o.budget, 0).toLocaleString('id-ID')}
+              Rp {orders.reduce((total, o) => total + o.budget, 0).toLocaleString('id-ID')}
             </div>
           </CardContent>
         </Card>
@@ -224,7 +217,7 @@ const AdminDashboard = () => {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Manajemen Pesanan</h2>
         
-        {mockOrders.map((order) => {
+        {orders.map((order) => {
           const statusInfo = getStatusBadge(order.status);
           
           return (
