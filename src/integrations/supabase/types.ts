@@ -14,7 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          budget: number
+          created_at: string
+          demo_link: string | null
+          description: string
+          final_link: string | null
+          id: string
+          service_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget: number
+          created_at?: string
+          demo_link?: string | null
+          description: string
+          final_link?: string | null
+          id?: string
+          service_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          created_at?: string
+          demo_link?: string | null
+          description?: string
+          final_link?: string | null
+          id?: string
+          service_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          ipaymu_session_id: string | null
+          ipaymu_transaction_id: string | null
+          order_id: string
+          payment_type: string
+          payment_url: string | null
+          status: string
+          updated_at: string
+          va_number: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          ipaymu_session_id?: string | null
+          ipaymu_transaction_id?: string | null
+          order_id: string
+          payment_type: string
+          payment_url?: string | null
+          status?: string
+          updated_at?: string
+          va_number?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          ipaymu_session_id?: string | null
+          ipaymu_transaction_id?: string | null
+          order_id?: string
+          payment_type?: string
+          payment_url?: string | null
+          status?: string
+          updated_at?: string
+          va_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
