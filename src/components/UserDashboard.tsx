@@ -29,21 +29,31 @@ const UserDashboard = () => {
 
   const fetchUserOrders = async () => {
     try {
+      if (!user?.id) {
+        console.log('No user ID available');
+        setOrders([]);
+        return;
+      }
+
+      console.log('Fetching orders for user:', user.id);
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error('Orders fetch error:', error);
         throw error;
       }
 
+      console.log('Orders fetched successfully:', data);
       setOrders(data || []);
     } catch (error: any) {
+      console.error('Error in fetchUserOrders:', error);
       toast({
         title: 'Error',
-        description: 'Gagal memuat pesanan',
+        description: `Gagal memuat pesanan: ${error.message}`,
         variant: 'destructive',
       });
     } finally {

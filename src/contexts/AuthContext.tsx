@@ -65,8 +65,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      // Check if user is admin by email
-      setIsAdmin(user?.email === 'carakawidi07@gmail.com');
+      // Get current session to access user email
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAdmin(session?.user?.email === 'carakawidi07@gmail.com');
     } catch (error) {
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
