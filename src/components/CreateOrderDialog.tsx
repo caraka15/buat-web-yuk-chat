@@ -59,6 +59,8 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
     setLoading(true);
 
     try {
+      console.log('Creating order with data:', { serviceType, description, budgetNumber, userId: user?.id });
+      
       // Create order in database
       const { data: newOrder, error } = await supabase
         .from('orders')
@@ -73,8 +75,11 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
         .single();
 
       if (error) {
+        console.error('Order creation error:', error);
         throw new Error(error.message);
       }
+      
+      console.log('Order created successfully:', newOrder);
       
       toast({
         title: 'Berhasil',
