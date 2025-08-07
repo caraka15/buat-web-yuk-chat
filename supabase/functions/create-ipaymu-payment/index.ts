@@ -42,7 +42,7 @@ serve(async (req: Request) => {
     const product = [`${paymentData.payment_type === 'dp' ? 'DP' : 'Pelunasan'} Pembayaran Proyek`];
     const qty = ["1"];
     const price = [paymentData.amount];
-    const body = `product[]=${product[0]}&qty[]=${qty[0]}&price[]=${price[0]}&returnUrl=https://preview--buat-web-yuk-chat.lovable.app/dashboard&cancelUrl=https://preview--buat-web-yuk-chat.lovable.app/dashboard&notifyUrl=https://gcejndsmdkdxtlhziiqx.supabase.co/functions/v1/payment-callback&buyerName=${paymentData.buyer_name}&buyerEmail=${paymentData.buyer_email}&buyerPhone=${paymentData.buyer_phone}&referenceId=${paymentData.order_id}`;
+    const body = `product[]=${product[0]}&qty[]=${qty[0]}&price[]=${price[0]}&returnUrl=https://preview--buat-web-yuk-chat.lovable.app/dashboard&cancelUrl=https://preview--buat-web-yuk-chat.lovable.app/dashboard&notifyUrl=https://gcejndsmdkdxtlhziiqx.supabase.co/functions/v1/payment-callback&buyerName=${encodeURIComponent(paymentData.buyer_name)}&buyerEmail=${encodeURIComponent(paymentData.buyer_email)}&buyerPhone=${encodeURIComponent(paymentData.buyer_phone)}&referenceId=${paymentData.order_id}`;
     
     // Generate signature
     const stringToSign = `POST:https://sandbox.ipaymu.com/api/v2/payment:${iPaymuVa}:${iPaymuApiKey}:${body}`;

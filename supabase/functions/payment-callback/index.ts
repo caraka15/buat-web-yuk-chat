@@ -12,25 +12,45 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Payment callback received, method:', req.method);
+    
     // Initialize Supabase client with service role key
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const body = await req.json()
-    console.log('Payment callback received:', body)
-
-    // Verify the callback is from iPaymu
-    const va = Deno.env.get('IPAYMU_VA')
-    const apiKey = Deno.env.get('IPAYMU_API_KEY')
-
-    if (!va || !apiKey) {
-      throw new Error('iPaymu credentials not found')
+    // Handle both POST and GET requests from iPaymu
+    let callbackData;
+    
+    if (req.method === 'POST') {
+      const contentType = req.headers.get('content-type');
+      if (contentType && contentType.includes('application/x-www-form-urlencoded')) {
+        const formData = await req.formData();
+        callbackData = {};
+        for (const [key, value] of formData.entries()) {
+          callbackData[key] = value;
+        }
+      } else {
+        callbackData = await req.json();
+      }
+    } else if (req.method === 'GET') {
+      const url = new URL(req.url);
+      callbackData = {};
+      for (const [key, value] of url.searchParams.entries()) {
+        callbackData[key] = value;
+      }
     }
 
+    console.log('Callback data received:', callbackData);
+
     // Extract payment info from callback
-    const { sid, status, reference_id, trx_id } = body
+    const { sid, status, reference_id, trx_id } = callbackData;
+
+    if (!sid) {
+      console.error('No session ID found in callback');
+      throw new Error('Session ID not found');
+    }
 
     // Update payment status
     const { data: payment, error: paymentError } = await supabaseClient
@@ -49,8 +69,11 @@ Deno.serve(async (req) => {
     }
 
     if (!payment) {
+      console.error('Payment not found for session:', sid)
       throw new Error('Payment not found')
     }
+
+    console.log('Payment updated:', payment);
 
     // Update order status based on payment type and status
     if (status === 'berhasil') {
@@ -63,13 +86,19 @@ Deno.serve(async (req) => {
       }
 
       if (newOrderStatus) {
-        await supabaseClient
+        const { error: orderError } = await supabaseClient
           .from('orders')
           .update({ 
             status: newOrderStatus,
             updated_at: new Date().toISOString()
           })
           .eq('id', payment.order_id)
+
+        if (orderError) {
+          console.error('Order update error:', orderError);
+        } else {
+          console.log('Order status updated to:', newOrderStatus);
+        }
       }
     }
 
