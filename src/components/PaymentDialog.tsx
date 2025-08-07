@@ -53,8 +53,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setLoading(true);
 
     try {
-      // Call edge function to create payment
-      const { data, error } = await supabase.functions.invoke('create-payment', {
+      // Call the new edge function
+      const { data, error } = await supabase.functions.invoke('create-ipaymu-payment', {
         body: {
           order_id: order.id,
           amount,
@@ -69,9 +69,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         throw new Error(error.message);
       }
 
-      if (data?.payment_url) {
-        setPaymentUrl(data.payment_url);
-        setVaNumber(data.session_id);
+      if (data?.paymentUrl) {
+        setPaymentUrl(data.paymentUrl);
+        setVaNumber(data.vaNumber || data.sessionId);
         
         toast({
           title: 'Pembayaran Dibuat',
