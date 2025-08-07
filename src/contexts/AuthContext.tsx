@@ -37,9 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Check admin status when session changes
         if (session?.user) {
-          setTimeout(() => {
-            checkAdminStatus(session.user.id);
-          }, 0);
+          checkAdminStatus(session.user.email);
         } else {
           setIsAdmin(false);
         }
@@ -53,9 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        setTimeout(() => {
-          checkAdminStatus(session.user.id);
-        }, 0);
+        checkAdminStatus(session.user.email);
       }
       setLoading(false);
     });
@@ -63,15 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminStatus = async (userId: string) => {
-    try {
-      // Get current session to access user email
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAdmin(session?.user?.email === 'carakawidi07@gmail.com');
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      setIsAdmin(false);
-    }
+  const checkAdminStatus = (userEmail?: string) => {
+    setIsAdmin(userEmail === 'carakawidi07@gmail.com');
   };
 
   const signUp = async (email: string, password: string, userData?: any) => {
