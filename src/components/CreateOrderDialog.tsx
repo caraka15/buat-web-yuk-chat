@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/api';
 
 interface CreateOrderDialogProps {
   open: boolean;
@@ -62,21 +62,16 @@ const CreateOrderDialog: React.FC<CreateOrderDialogProps> = ({ open, onOpenChang
       console.log('Creating order with data:', { serviceType, description, budgetNumber, userId: user?.id });
       
       // Create order in database
-      const { data: newOrder, error } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user?.id,
-          service_type: serviceType,
-          description,
-          budget: budgetNumber,
-          status: 'pending_dp_payment'
-        })
-        .select()
-        .single();
+      const newOrder = await api.post('/orders', {
+        user_id: user?.id,
+        service_type: serviceType,
+        description,
+        budget: budgetNumber,
+        status: 'pending_dp_payment'
+      }, user?.token);
 
-      if (error) {
-        console.error('Order creation error:', error);
-        throw new Error(error.message);
+      if (!newOrder) {
+        throw new Error("Failed to create order");
       }
       
       console.log('Order created successfully:', newOrder);

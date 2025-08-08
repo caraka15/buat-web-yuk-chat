@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/api';
 import { CreditCard, ExternalLink } from 'lucide-react';
 
 interface PaymentDialogProps {
@@ -53,21 +53,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setLoading(true);
 
     try {
-      // Call the new edge function
-      const { data, error } = await supabase.functions.invoke('create-ipaymu-payment', {
-        body: {
-          order_id: order.id,
-          amount,
-          payment_type: paymentType,
-          buyer_name: name,
-          buyer_email: user?.email,
-          buyer_phone: phone
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      const data = await api.post('/ipaymu/initiate', {
+        order_id: order.id,
+        amount,
+        payment_type: paymentType,
+        buyer_name: name,
+        buyer_email: user?.email,
+        buyer_phone: phone
+      }, user?.token);
 
       if (data?.paymentUrl) {
         setPaymentUrl(data.paymentUrl);

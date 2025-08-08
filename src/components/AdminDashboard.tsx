@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,10 +9,9 @@ import { Label } from '@/components/ui/label';
 import { LogOut, Check, X, ExternalLink, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [demoLink, setDemoLink] = useState('');
@@ -25,20 +25,11 @@ const AdminDashboard = () => {
 
   const fetchAllOrders = async () => {
     try {
-      // Get user information separately since we can't join auth.users directly
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const ordersData = await api.get('/orders', user?.token);
 
-      if (ordersError) {
-        throw ordersError;
-      }
-
-      // For each order, we'll use the user_id as the email for now since we can't access auth.users
-      const ordersWithUserInfo = ordersData?.map(order => ({
+      const ordersWithUserInfo = ordersData?.map((order: any) => ({
         ...order,
-        user_email: order.user_id // We'll show user_id until we have profiles table
+        user_email: order.user_id, // We'll show user_id until we have profiles table
       })) || [];
 
       setOrders(ordersWithUserInfo);
@@ -67,15 +58,16 @@ const AdminDashboard = () => {
 
   const handleApproveOrder = async (orderId: string) => {
     try {
-      // TODO: Implement order approval
+      await api.put(`/orders/${orderId}/status`, { status: 'approved' }, user?.token);
       toast({
         title: 'Berhasil',
         description: 'Pesanan berhasil disetujui',
       });
-    } catch (error) {
+      fetchAllOrders(); // Refresh orders
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Gagal menyetujui pesanan',
+        description: `Gagal menyetujui pesanan: ${error.message}`,
         variant: 'destructive',
       });
     }
@@ -83,15 +75,16 @@ const AdminDashboard = () => {
 
   const handleRejectOrder = async (orderId: string) => {
     try {
-      // TODO: Implement order rejection
+      await api.put(`/orders/${orderId}/status`, { status: 'rejected' }, user?.token);
       toast({
         title: 'Berhasil',
         description: 'Pesanan berhasil ditolak',
       });
-    } catch (error) {
+      fetchAllOrders(); // Refresh orders
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Gagal menolak pesanan',
+        description: `Gagal menolak pesanan: ${error.message}`,
         variant: 'destructive',
       });
     }
@@ -108,17 +101,18 @@ const AdminDashboard = () => {
     }
 
     try {
-      // TODO: Implement demo link update
+      await api.put(`/orders/${orderId}`, { demo_link: demoLink, status: 'demo_ready' }, user?.token);
       toast({
         title: 'Berhasil',
         description: 'Link demo berhasil diupdate',
       });
       setDemoLink('');
       setSelectedOrder(null);
-    } catch (error) {
+      fetchAllOrders(); // Refresh orders
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Gagal mengupdate link demo',
+        description: `Gagal mengupdate link demo: ${error.message}`,
         variant: 'destructive',
       });
     }
@@ -135,17 +129,18 @@ const AdminDashboard = () => {
     }
 
     try {
-      // TODO: Implement final link update
+      await api.put(`/orders/${orderId}`, { final_link: finalLink, status: 'completed' }, user?.token);
       toast({
         title: 'Berhasil',
         description: 'Link final berhasil diupdate',
       });
       setFinalLink('');
       setSelectedOrder(null);
-    } catch (error) {
+      fetchAllOrders(); // Refresh orders
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Gagal mengupdate link final',
+        description: `Gagal mengupdate link final: ${error.message}`,
         variant: 'destructive',
       });
     }
@@ -165,7 +160,7 @@ const AdminDashboard = () => {
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Kelola pesanan dan proyek</p>
         </div>
-        <Button variant="outline" onClick={signOut}>
+        <Button variant="outline" onClick={logout}>
           <LogOut className="w-4 h-4 mr-2" />
           Keluar
         </Button>

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -14,7 +14,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { login, register, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -28,20 +28,18 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const result = await login(email, password);
 
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message === 'Invalid login credentials' 
-          ? 'Email atau password salah'
-          : error.message,
-        variant: 'destructive',
-      });
-    } else {
+    if (result.success) {
       toast({
         title: 'Berhasil',
         description: 'Login berhasil!',
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: result.message || 'Login gagal. Periksa kembali email dan password Anda.',
+        variant: 'destructive',
       });
     }
     setLoading(false);
@@ -51,22 +49,18 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await signUp(email, password, {
-      full_name: name,
-    });
+    const result = await register(name, email, password);
 
-    if (error) {
+    if (result.success) {
       toast({
-        title: 'Error',
-        description: error.message === 'User already registered'
-          ? 'Email sudah terdaftar'
-          : error.message,
-        variant: 'destructive',
+        title: 'Berhasil',
+        description: result.message || 'Akun berhasil dibuat! Silakan login.',
       });
     } else {
       toast({
-        title: 'Berhasil',
-        description: 'Akun berhasil dibuat! Silakan login.',
+        title: 'Error',
+        description: result.message || 'Gagal membuat akun. Email mungkin sudah terdaftar.',
+        variant: 'destructive',
       });
     }
     setLoading(false);

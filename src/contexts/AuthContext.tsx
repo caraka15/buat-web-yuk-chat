@@ -1,103 +1,155 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+} from "react";
+import axios from "axios";
+import { decodeJwt } from "jose";
+
+// =====================
+// Types
+// =====================
+interface User {
+  userId: string;
+  email: string;
+  is_admin: number;
+}
+
+interface RegisterResponse {
+  message: string;
+  userId: string;
+}
+
+interface LoginResponse {
+  message: string;
+  token: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
-  loading: boolean;
-  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
-  isAdmin: boolean;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  logout: () => void;
 }
 
+// =====================
+// Context setup
+// =====================
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// Axios instance untuk memudahkan API call
+const api = axios.create({
+  baseURL: "http://localhost:8000", // ganti dengan domain VPS kalau sudah deploy
+  headers: { "Content-Type": "application/json" },
+});
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
 
+  // Cek token di localStorage saat load
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Check admin status when session changes
-        if (session?.user) {
-          checkAdminStatus(session.user.email);
-        } else {
-          setIsAdmin(false);
-        }
-        setLoading(false);
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded: any = decodeJwt(token);
+        setUser({
+          userId: decoded.userId,
+          email: decoded.email,
+          is_admin: decoded.is_admin,
+        });
+      } catch (err) {
+        console.error("Invalid token:", err);
+        localStorage.removeItem("token");
       }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        checkAdminStatus(session.user.email);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
-  const checkAdminStatus = (userEmail?: string) => {
-    setIsAdmin(userEmail === 'carakawidi07@gmail.com');
-  };
+  // =====================
+  // Register
+  // =====================
+  const register = async (
+    name: string,
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await api.post<RegisterResponse>("/register", {
+        name,
+        email,
+        password,
+      });
 
-  const signUp = async (email: string, password: string, userData?: any) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: userData
+      if (response.data.userId) {
+        return { success: true, message: response.data.message };
+      } else {
+        return { success: false, message: "Gagal membuat akun." };
       }
-    });
-    return { error };
+    } catch (error: any) {
+      console.error("Registration failed:", error);
+      return { success: false, message: "Terjadi kesalahan saat mendaftar." };
+    }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+  // =====================
+  // Login
+  // =====================
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await api.post<LoginResponse>("/login", {
+        email,
+        password,
+      });
+
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        const decoded: any = decodeJwt(response.data.token);
+        setUser({
+          userId: decoded.userId,
+          email: decoded.email,
+          is_admin: decoded.is_admin,
+        });
+        return { success: true, message: response.data.message };
+      } else {
+        return { success: false, message: "Email atau password salah." };
+      }
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      return { success: false, message: "Terjadi kesalahan saat login." };
+    }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  // =====================
+  // Logout
+  // =====================
+  const logout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
   };
 
-  const value = {
-    user,
-    session,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-    isAdmin
-  };
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+// Hook untuk pakai AuthContext
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 };

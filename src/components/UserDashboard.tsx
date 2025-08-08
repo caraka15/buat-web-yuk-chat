@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { LogOut, Plus, MessageCircle, ExternalLink } from 'lucide-react';
 import CreateOrderDialog from '@/components/CreateOrderDialog';
 import PaymentDialog from '@/components/PaymentDialog';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '../lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 const UserDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<{
     open: boolean;
@@ -36,16 +36,7 @@ const UserDashboard = () => {
       }
 
       console.log('Fetching orders for user:', user.id);
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Orders fetch error:', error);
-        throw error;
-      }
+      const data = await api.get(`/orders/user/${user.id}`, user.token);
 
       console.log('Orders fetched successfully:', data);
       setOrders(data || []);
@@ -95,14 +86,14 @@ const UserDashboard = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Selamat datang, {user?.user_metadata?.full_name || user?.email}</p>
+          <p className="text-muted-foreground">Selamat datang, {user?.email}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setShowCreateOrder(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Buat Pesanan
           </Button>
-          <Button variant="outline" onClick={signOut}>
+          <Button variant="outline" onClick={logout}>
             <LogOut className="w-4 h-4 mr-2" />
             Keluar
           </Button>
