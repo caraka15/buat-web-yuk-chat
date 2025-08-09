@@ -1,7 +1,7 @@
 // src/lib/api.ts
 
 // Pastikan ada fallback -> tidak jadi "undefined"
-const RAW_BASE = import.meta.env.VITE_API_BASE_URL;
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // Normalisasi (hapus trailing slash)
 function trimSlash(s: string) {
