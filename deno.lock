@@ -247,6 +247,7 @@
         "npm:eslint-plugin-react-refresh@~0.4.9",
         "npm:eslint@^9.9.0",
         "npm:globals@^15.9.0",
+        "npm:gusmang-ipaymu-node@^1.0.7",
         "npm:input-otp@^1.2.4",
         "npm:jose@^6.0.12",
         "npm:lovable-tagger@^1.1.7",

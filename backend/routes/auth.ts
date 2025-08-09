@@ -1,45 +1,96 @@
-import { Router } from "oak";
+// routes/auth.ts
+import { Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
 import { registerUser, loginUser } from "../services/authService.ts";
 
 const authRouter = new Router();
 
-authRouter.post("/register", async (context) => {
-  const { name, email, password } = await context.request.body().value;
-  if (!name || !email || !password) {
-    context.response.status = 400;
-    context.response.body = { error: "Name, email, and password are required" };
-    return;
+/**
+ * Helper aman untuk baca JSON body
+ */
+async function readJson<T>(ctx: any): Promise<T> {
+  try {
+    return await ctx.request.body({ type: "json" }).value;
+  } catch {
+    throw Object.assign(new Error("Invalid JSON body"), { status: 400 });
   }
-  const userId = await registerUser(name, email, password);
-  if (userId) {
-    context.response.status = 201;
-    context.response.body = { message: "User registered successfully", userId };
-  } else {
-    context.response.status = 400;
-    context.response.body = {
-      error: "Failed to register user. Email might already be in use.",
-    };
+}
+
+/**
+ * POST /register
+ * body: { name, email, password }
+ */
+authRouter.post("/register", async (ctx) => {
+  try {
+    const { name, email, password } = await readJson<{
+      name: string;
+      email: string;
+      password: string;
+    }>(ctx);
+
+    if (!name || !email || !password) {
+      ctx.response.status = 400;
+      ctx.response.body = { error: "Name, email, and password are required" };
+      return;
+    }
+
+    const userId = await registerUser(name.trim(), email.trim(), password);
+    ctx.response.status = 201;
+    ctx.response.body = { message: "User registered successfully", userId };
+  } catch (e) {
+    const msg = (e as Error).message || "Internal Server Error";
+    const status = (e as any).status;
+
+    if (msg === "EMAIL_TAKEN") {
+      ctx.response.status = 409; // Conflict
+      ctx.response.body = { error: "Email already in use" };
+      return;
+    }
+    if (status) {
+      ctx.response.status = status;
+      ctx.response.body = { error: msg };
+      return;
+    }
+
+    console.error("[register] error:", e);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Internal Server Error" };
   }
 });
 
-authRouter.post("/login", async (context) => {
-  const { email, password } = await context.request.body().value;
-  if (!email || !password) {
-    context.response.status = 400;
-    context.response.body = { error: "Email and password are required" };
-    return;
-  }
-
+/**
+ * POST /login
+ * body: { email, password }
+ */
+authRouter.post("/login", async (ctx) => {
   try {
-    const userData = await loginUser(email, password);
-    context.response.status = 200;
-    context.response.body = {
+    const { email, password } = await readJson<{
+      email: string;
+      password: string;
+    }>(ctx);
+
+    if (!email || !password) {
+      ctx.response.status = 400;
+      ctx.response.body = { error: "Email and password are required" };
+      return;
+    }
+
+    const userData = await loginUser(email.trim(), password);
+    ctx.response.status = 200;
+    ctx.response.body = {
       message: "Login successful",
-      ...userData, // spread object biar nggak nested
+      ...userData, // { id, name, email, token }
     };
-  } catch {
-    context.response.status = 401;
-    context.response.body = { error: "Invalid credentials" };
+  } catch (e) {
+    const msg = (e as Error).message || "Invalid credentials";
+    if (msg === "INVALID_CREDENTIALS") {
+      ctx.response.status = 401;
+      ctx.response.body = { error: "Invalid credentials" };
+      return;
+    }
+
+    console.error("[login] error:", e);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Internal Server Error" };
   }
 });
 

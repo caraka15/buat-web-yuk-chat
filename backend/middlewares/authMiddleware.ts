@@ -1,21 +1,17 @@
-import { verify } from "djwt"; // pastikan djwt terinstall
-const JWT_SECRET = Deno.env.get("JWT_SECRET");
+import { RouterContext } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { getUserIdFromHeader } from "../middlewares/auth.ts";
 
-export const authMiddleware = async (context: any, next: any) => {
-  const authHeader = context.request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    context.response.status = 401;
-    context.response.body = { error: "Unauthorized" };
-    return;
-  }
-
+export async function authMiddleware(
+  ctx: RouterContext<string, Record<string, string>, Record<string, unknown>>,
+  next: () => Promise<unknown>
+) {
   try {
-    const token = authHeader.split(" ")[1];
-    const payload = await verify(token, JWT_SECRET, "HS256");
-    context.state.userId = payload.userId; // pastikan loginUser meng-encode userId
+    const authHeader = ctx.request.headers.get("Authorization");
+    const userId = await getUserIdFromHeader(authHeader);
+    ctx.state.userId = userId;
     await next();
-  } catch {
-    context.response.status = 401;
-    context.response.body = { error: "Invalid or expired token" };
+  } catch (_e) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Unauthorized" };
   }
-};
+}

@@ -1,52 +1,94 @@
+// backend/services/orderService.ts
 import { query, execute } from "../db.ts";
+import { generateUuid } from "../utils/uuid.ts";
 
-interface Order {
-  id: number;
-  user_id: number; // Added user_id
+interface OrderInput {
+  service_type: string;
+  description: string;
+  budget: number;
+}
+
+interface OrderRow {
+  id: string;
+  user_id: string;
+  service_type: string;
+  description: string;
+  budget: number;
   status: string;
-  total_price: number;
+  demo_link: string | null;
+  final_link: string | null; // disimpan URL asli di DB
   created_at: string;
+  updated_at: string;
 }
+// Buat pesanan baru
+export async function createOrder(userId: string, data: OrderInput) {
+  const { service_type, description, budget } = data;
 
-// Ambil semua order
-export async function getAllOrders(): Promise<Order[]> {
-  return await query<Order>("SELECT * FROM orders ORDER BY created_at DESC");
-}
+  if (!service_type || !description || isNaN(budget)) {
+    throw new Error("Invalid input");
+  }
 
-// Ambil order berdasarkan ID
-export async function getOrderById(orderId: number): Promise<Order | null> {
-  const rows = await query<Order>("SELECT id, user_id, status, total_price, created_at FROM orders WHERE id = ?", [
-    orderId,
+  const id = generateUuid();
+
+  const sql = `
+    INSERT INTO orders (id, user_id, service_type, description, budget)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+  const result = await execute(sql, [
+    id,
+    userId,
+    service_type,
+    description,
+    budget,
   ]);
-  return rows.length > 0 ? rows[0] : null;
+
+  return {
+    message: "Order created successfully",
+    orderId: id,
+    affectedRows: result.affectedRows ?? 0,
+  };
 }
 
-// Ambil order berdasarkan user
-export async function getOrdersByUserId(userId: number): Promise<Order[]> {
-  return await query<Order>("SELECT * FROM orders WHERE user_id = ?", [userId]);
+/**
+ * Ambil semua order milik user.
+ * NOTE: final_link DIMASKING (NULL) jika status != 'completed'
+ */
+export async function getOrdersByUserId(userId: string) {
+  const sql = `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC`;
+  const rows = await query<OrderRow>(sql, [userId]);
+
+  // Masking untuk USER (bukan admin):
+  // - final_link === null  -> state: "none", final_link: null
+  // - final_link != null & status != "completed" -> state: "ready", final_link: "ready"
+  // - status == "completed" -> state: "available", final_link: URL asli
+  return rows.map((o) => {
+    let final_link_state: "none" | "ready" | "available" = "none";
+    let safe_final_link: string | null = null;
+
+    if (!o.final_link) {
+      final_link_state = "none";
+      safe_final_link = null;
+    } else if (o.status !== "completed") {
+      final_link_state = "ready";
+      safe_final_link = "ready";
+    } else {
+      final_link_state = "available";
+      safe_final_link = o.final_link;
+    }
+
+    return {
+      ...o,
+      final_link: safe_final_link,
+      final_link_state, // <- dipakai UI untuk logika tombol
+    };
+  });
 }
 
-// Buat order baru
-export async function createOrder(
-  userId: number,
-  totalPrice: number,
-  status: string
-): Promise<number | null> {
-  const result = await execute(
-    "INSERT INTO orders (user_id, total_price, status) VALUES (?, ?, ?)",
-    [userId, totalPrice, status]
-  );
-  return result.lastInsertId ?? null;
-}
-
-// Update status order
-export async function updateOrderStatus(
-  orderId: number,
-  status: string
-): Promise<boolean> {
-  const result = await execute("UPDATE orders SET status = ? WHERE id = ?", [
-    status,
-    orderId,
-  ]);
-  return (result.affectedRows ?? 0) > 0; // pakai default 0 kalau undefined
+// Update status pesanan (dipakai callback/payment flow)
+export async function updateOrderStatus(orderId: string, status: string) {
+  const sql = `UPDATE orders SET status = ? WHERE id = ?`;
+  const result = await execute(sql, [status, orderId]);
+  return {
+    affectedRows: result.affectedRows ?? 0,
+  };
 }

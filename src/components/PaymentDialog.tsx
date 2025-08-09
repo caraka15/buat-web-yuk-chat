@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/api';
-import { CreditCard, ExternalLink } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { CreditCard, ExternalLink } from "lucide-react";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -17,188 +21,146 @@ interface PaymentDialogProps {
     service_type: string;
     description: string;
   };
-  paymentType: 'dp' | 'full';
+  paymentType: "dp" | "full";
 }
 
-const PaymentDialog: React.FC<PaymentDialogProps> = ({ 
-  open, 
-  onOpenChange, 
-  order, 
-  paymentType 
+const PaymentDialog: React.FC<PaymentDialogProps> = ({
+  open,
+  onOpenChange,
+  order,
+  paymentType,
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState(user?.user_metadata?.full_name || '');
-  const [phone, setPhone] = useState('');
-  const [paymentUrl, setPaymentUrl] = useState('');
-  const [vaNumber, setVaNumber] = useState('');
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [sessionId, setSessionId] = useState("");
 
-  const amount = paymentType === 'dp' 
-    ? Math.round(order.budget * 0.1) // 10% DP
-    : Math.round(order.budget * 0.9); // 90% remaining
+  // Hitung nominal sesuai tipe pembayaran
+  const amount = useMemo(
+    () =>
+      paymentType === "dp"
+        ? Math.round(order.budget * 0.1) // 10%
+        : Math.round(order.budget * 0.9), // 90%
+    [order.budget, paymentType]
+  );
 
-  const handleCreatePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name || !phone) {
-      toast({
-        title: 'Error',
-        description: 'Nama dan nomor HP harus diisi',
-        variant: 'destructive',
-      });
-      return;
+  // Reset state saat dialog ditutup
+  useEffect(() => {
+    if (!open) {
+      setPaymentUrl("");
+      setSessionId("");
+      setLoading(false);
     }
+  }, [open]);
 
-    setLoading(true);
-
+  async function createPayment() {
     try {
-      const data = await api.post('/ipaymu/initiate', {
-        order_id: order.id,
-        amount,
-        payment_type: paymentType,
-        buyer_name: name,
-        buyer_email: user?.email,
-        buyer_phone: phone
-      }, user?.token);
+      setLoading(true);
 
-      if (data?.paymentUrl) {
-        setPaymentUrl(data.paymentUrl);
-        setVaNumber(data.vaNumber || data.sessionId);
-        
-        toast({
-          title: 'Pembayaran Dibuat',
-          description: 'Link pembayaran berhasil dibuat. Silakan lakukan pembayaran.',
-        });
-      } else {
-        throw new Error(data.error || 'Gagal membuat pembayaran');
+      // endpoint sesuai tipe
+      const endpoint = paymentType === "dp" ? "/payment-dp" : "/payment-full";
+
+      const data = await api.post<{ sessionId: string; paymentUrl: string }>(
+        endpoint,
+        { order_id: order.id },
+        user?.token // token tetap dikirim, walau route kamu sekarang belum pakai auth
+      );
+
+      if (!data?.paymentUrl) {
+        throw new Error("Gagal membuat pembayaran");
       }
-    } catch (error: any) {
-      console.error('Payment error:', error);
+
+      setPaymentUrl(data.paymentUrl);
+      setSessionId(data.sessionId || "");
       toast({
-        title: 'Error',
-        description: error.message || 'Gagal membuat pembayaran',
-        variant: 'destructive',
+        title: "Pembayaran dibuat",
+        description: "Silakan lanjutkan proses di halaman iPaymu.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Gagal membuat pembayaran",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handlePaymentRedirect = () => {
+  function handleOpenPayment() {
     if (paymentUrl) {
-      window.open(paymentUrl, '_blank');
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            {paymentType === 'dp' ? 'Pembayaran DP (10%)' : 'Pembayaran Sisa (90%)'}
+            {paymentType === "dp"
+              ? "Pembayaran DP (10%)"
+              : "Pembayaran Sisa (90%)"}
           </DialogTitle>
           <DialogDescription>
-            Pembayaran untuk pesanan {order.id}
+            Pembayaran untuk pesanan <strong>{order.id}</strong>
           </DialogDescription>
         </DialogHeader>
 
+        {/* Ringkasan selalu tampil */}
+        <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span>Layanan:</span>
+            <span>{order.service_type}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Total Budget:</span>
+            <span>Rp {order.budget.toLocaleString("id-ID")}</span>
+          </div>
+          <div className="flex justify-between font-semibold">
+            <span>{paymentType === "dp" ? "DP (10%):" : "Sisa (90%):"}</span>
+            <span>Rp {amount.toLocaleString("id-ID")}</span>
+          </div>
+          {sessionId && (
+            <div className="flex justify-between">
+              <span>Session ID:</span>
+              <span className="font-mono">{sessionId}</span>
+            </div>
+          )}
+        </div>
+
         {!paymentUrl ? (
-          <form onSubmit={handleCreatePayment} className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Detail Pembayaran</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Layanan:</span>
-                  <span>{order.service_type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Budget:</span>
-                  <span>Rp {order.budget.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span>
-                    {paymentType === 'dp' ? 'DP (10%):' : 'Sisa (90%):'}
-                  </span>
-                  <span>Rp {amount.toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Nama Lengkap</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nama untuk pembayaran"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Nomor HP</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="08xxxxxxxxxx"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-              >
-                Batal
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Membuat...' : 'Buat Pembayaran'}
-              </Button>
-            </div>
-          </form>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Batal
+            </Button>
+            <Button onClick={createPayment} disabled={loading}>
+              {loading ? "Membuat..." : "Buat Pembayaran"}
+            </Button>
+          </div>
         ) : (
-          <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-800 mb-2">
-                Pembayaran Berhasil Dibuat!
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-green-700">Jumlah: </span>
-                  <span className="font-semibold">Rp {amount.toLocaleString('id-ID')}</span>
-                </div>
-                {vaNumber && (
-                  <div>
-                    <span className="text-green-700">VA Number: </span>
-                    <span className="font-mono font-semibold">{vaNumber}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button onClick={handlePaymentRedirect} className="w-full">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Buka Halaman Pembayaran
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                className="w-full"
-              >
-                Tutup
-              </Button>
-            </div>
-
+          <div className="flex flex-col gap-2 pt-2">
+            <Button onClick={handleOpenPayment} className="w-full">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Buka Halaman Pembayaran
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="w-full"
+            >
+              Tutup
+            </Button>
             <div className="text-xs text-muted-foreground text-center">
-              Status pembayaran akan otomatis terupdate setelah pembayaran berhasil
+              Status akan otomatis terupdate setelah pembayaran berhasil (via
+              callback).
             </div>
           </div>
         )}

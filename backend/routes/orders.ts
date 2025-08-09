@@ -1,102 +1,50 @@
-import { Router } from "oak";
-import { authMiddleware } from "../middlewares/authMiddleware.ts";
-import {
-  createOrder,
-  getOrderById,
-  getOrdersByUserId,
-  updateOrderStatus,
-  getAllOrders,
-} from "../services/orderService.ts";
+// backend/routes/orders.ts
+import { Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { createOrder, getOrdersByUserId } from "../services/orderService.ts";
+import { getUserIdFromHeader } from "../middlewares/auth.ts";
 
-const ordersRouter = new Router();
+const router = new Router();
 
-// Middleware for authentication (simplified for now)
-const authMiddleware = async (context: any, next: any) => {
-  const authHeader = context.request.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    context.response.status = 401;
-    context.response.body = { error: "Unauthorized" };
-    return;
-  }
-  // In a real app, verify JWT and extract user ID
-  // For now, we'll just assume a user ID for testing
-  context.state.userId = "some-test-user-id"; // Replace with actual user ID from JWT
-  await next();
-};
+router
+  // CREATE order (user)
+  .post("/orders", async (ctx) => {
+    try {
+      const authHeader = ctx.request.headers.get("Authorization");
+      const userId = await getUserIdFromHeader(authHeader);
 
-// Middleware for admin authorization (simplified for now)
-const adminMiddleware = async (context: any, next: any) => {
-  // In a real app, verify JWT and check if user is admin
-  // For now, we'll just assume admin for testing
-  const isAdmin = true; // Replace with actual admin check
-  if (!isAdmin) {
-    context.response.status = 403;
-    context.response.body = { error: "Forbidden" };
-    return;
-  }
-  await next();
-};
+      const { service_type, description, budget } = await ctx.request.body({
+        type: "json",
+      }).value;
 
-ordersRouter.post("/", authMiddleware, async (context) => {
-  const { service_type, description, budget, status } =
-    await context.request.body().value;
+      const result = await createOrder(userId, {
+        service_type,
+        description,
+        budget: Number(budget),
+      });
 
-  if (!service_type || !description || !budget) {
-    context.response.status = 400;
-    context.response.body = { error: "Missing required fields" };
-    return;
-  }
+      ctx.response.status = 201;
+      ctx.response.body = result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      ctx.response.status = err.message === "Unauthorized" ? 401 : 500;
+      ctx.response.body = { error: err.message };
+    }
+  })
 
-  const orderId = await createOrder(
-    context.state.userId,
-    service_type,
-    description,
-    budget,
-    status
-  );
+  // LIST orders milik user (final_link akan dimasking jika belum completed)
+  .get("/orders", async (ctx) => {
+    try {
+      const authHeader = ctx.request.headers.get("Authorization");
+      const userId = await getUserIdFromHeader(authHeader);
 
-  if (orderId) {
-    context.response.status = 201;
-    context.response.body = { message: "Order created successfully", orderId };
-  } else {
-    context.response.status = 400;
-    context.response.body = { error: "Failed to create order" };
-  }
-});
+      const orders = await getOrdersByUserId(userId);
+      ctx.response.status = 200;
+      ctx.response.body = orders;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      ctx.response.status = err.message === "Unauthorized" ? 401 : 500;
+      ctx.response.body = { error: err.message };
+    }
+  });
 
-ordersRouter.get("/:id", authMiddleware, async (context) => {
-  const order = await getOrderById(context.params.id);
-  if (order) {
-    context.response.status = 200;
-    context.response.body = order;
-  } else {
-    context.response.status = 404;
-    context.response.body = { error: "Order not found" };
-  }
-});
-
-ordersRouter.get("/user/:userId", authMiddleware, async (context) => {
-  const orders = await getOrdersByUserId(context.params.userId);
-  context.response.status = 200;
-  context.response.body = orders;
-});
-
-ordersRouter.put("/:id/status", adminMiddleware, async (context) => {
-  const { status } = await context.request.body().value;
-  const updated = await updateOrderStatus(context.params.id, status);
-  if (updated) {
-    context.response.status = 200;
-    context.response.body = { message: "Order status updated successfully" };
-  } else {
-    context.response.status = 400;
-    context.response.body = { error: "Failed to update order status" };
-  }
-});
-
-ordersRouter.get("/", adminMiddleware, async (context) => {
-  const orders = await getAllOrders();
-  context.response.status = 200;
-  context.response.body = orders;
-});
-
-export default ordersRouter;
+export default router;

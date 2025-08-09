@@ -1,44 +1,220 @@
-import { Router } from "oak";
-import { createPayment, updatePaymentStatus, getPaymentBySessionId } from "../services/paymentService.ts";
+// routes/payment.ts
+import { Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { query, execute } from "../db.ts";
+import { createHash, createHmac } from "node:crypto";
+import { Buffer } from "node:buffer";
 
-const paymentsRouter = new Router();
+const router = new Router();
 
-// Middleware for authentication (simplified for now)
-const authMiddleware = async (context: any, next: any) => {
-  const authHeader = context.request.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    context.response.status = 401;
-    context.response.body = { error: "Unauthorized" };
-    return;
-  }
-  // In a real app, verify JWT and extract user ID
-  // For now, we'll just assume a user ID for testing
-  context.state.userId = "some-test-user-id"; // Replace with actual user ID from JWT
-  await next();
-};
+const IPAYMU_URL = Deno.env.get("IPAYMU_API_URL")!;
+const IPAYMU_VA = Deno.env.get("IPAYMU_VA")!;
+const IPAYMU_API_KEY = Deno.env.get("IPAYMU_API_KEY")!;
 
-paymentsRouter.post("/", authMiddleware, async (context) => {
-  const paymentData = await context.request.body().value;
-  const paymentId = await createPayment(paymentData);
-  if (paymentId) {
-    context.response.status = 201;
-    context.response.body = { message: "Payment created successfully", paymentId };
-  } else {
-    context.response.status = 400;
-    context.response.body = { error: "Failed to create payment" };
+function getTimestamp(): string {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const d = date.getDate().toString().padStart(2, "0");
+  const h = date.getHours().toString().padStart(2, "0");
+  const i = date.getMinutes().toString().padStart(2, "0");
+  const s = date.getSeconds().toString().padStart(2, "0");
+  return `${y}${m}${d}${h}${i}${s}`;
+}
+
+function generateSignature(
+  data: any,
+  credentials: { va: string; apiKey: string }
+): string {
+  const body = JSON.stringify(data);
+  const bodyHash = createHash("sha256")
+    .update(body)
+    .digest("hex")
+    .toLowerCase();
+  const stringToSign = `POST:${credentials.va}:${bodyHash}:${credentials.apiKey}`;
+  const hmac = createHmac("sha256", credentials.apiKey);
+  return hmac.update(Buffer.from(stringToSign, "utf-8")).digest("hex");
+}
+
+router.post("/payment-dp", async (ctx) => {
+  try {
+    const { order_id } = await ctx.request.body({ type: "json" }).value;
+
+    const [order] = await query<{
+      id: string;
+      service_type: string;
+      budget: number;
+    }>("SELECT * FROM orders WHERE id = ?", [order_id]);
+
+    if (!order) throw new Error("Order not found");
+
+    const dpAmount = Math.floor(order.budget * 0.1);
+    const product = [`DP - ${order.service_type}`];
+    const qty = ["1"];
+    const price = [dpAmount.toString()];
+
+    const payload = {
+      product,
+      qty,
+      price,
+      returnUrl: `${Deno.env.get("FRONTEND_URL")}/dashboard`,
+      notifyUrl: `${Deno.env.get("BACKEND_URL")}/api/payment/callback-dp`,
+      cancelUrl: `${Deno.env.get("FRONTEND_URL")}/order/${order_id}/cancel`,
+      referenceId: order_id,
+      buyerName: "John Doe",
+      buyerEmail: "john@gmail.com",
+    };
+
+    const signature = generateSignature(payload, {
+      va: IPAYMU_VA,
+      apiKey: IPAYMU_API_KEY,
+    });
+    const timestamp = getTimestamp();
+
+    const response = await fetch(IPAYMU_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        va: IPAYMU_VA,
+        signature,
+        timestamp,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (data.Status !== 200 || !data.Data?.SessionID || !data.Data?.Url) {
+      throw new Error("iPaymu Error: " + (data?.Message || "Unknown"));
+    }
+
+    ctx.response.status = 200;
+    ctx.response.body = {
+      sessionId: data.Data.SessionID,
+      paymentUrl: data.Data.Url,
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: message };
   }
 });
 
-paymentsRouter.put("/:sessionId/status", async (context) => {
-  const { status } = await context.request.body().value;
-  const updated = await updatePaymentStatus(context.params.sessionId, status);
-  if (updated) {
-    context.response.status = 200;
-    context.response.body = { message: "Payment status updated successfully" };
-  } else {
-    context.response.status = 400;
-    context.response.body = { error: "Failed to update payment status" };
+router.post("/payment-full", async (ctx) => {
+  try {
+    const { order_id } = await ctx.request.body({ type: "json" }).value;
+
+    const [order] = await query<{
+      id: string;
+      service_type: string;
+      budget: number;
+    }>("SELECT * FROM orders WHERE id = ?", [order_id]);
+
+    if (!order) throw new Error("Order not found");
+
+    const fullAmount = Math.floor(order.budget * 0.9);
+    const product = [`Pelunasan - ${order.service_type}`];
+    const qty = ["1"];
+    const price = [fullAmount.toString()];
+
+    const payload = {
+      product,
+      qty,
+      price,
+      returnUrl: `${Deno.env.get("FRONTEND_URL")}/dashboard`,
+      notifyUrl: `${Deno.env.get("BACKEND_URL")}/api/payment/callback-full`,
+      cancelUrl: `${Deno.env.get("FRONTEND_URL")}/order/${order_id}/cancel`,
+      referenceId: order_id,
+      buyerName: "John Doe",
+      buyerEmail: "john@gmail.com",
+    };
+
+    const signature = generateSignature(payload, {
+      va: IPAYMU_VA,
+      apiKey: IPAYMU_API_KEY,
+    });
+    const timestamp = getTimestamp();
+
+    const response = await fetch(IPAYMU_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        va: IPAYMU_VA,
+        signature,
+        timestamp,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (data.Status !== 200 || !data.Data?.SessionID || !data.Data?.Url) {
+      throw new Error("iPaymu Error: " + (data?.Message || "Unknown"));
+    }
+
+    ctx.response.status = 200;
+    ctx.response.body = {
+      sessionId: data.Data.SessionID,
+      paymentUrl: data.Data.Url,
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: message };
   }
 });
 
-export default paymentsRouter;
+router.post("/api/payment/callback-dp", async (ctx) => {
+  try {
+    const body = await ctx.request.body({ type: "form" }).value;
+    const referenceId = body.get("reference_id");
+    const status = body.get("status");
+
+    if (!referenceId || !status) {
+      ctx.response.status = 400;
+      ctx.response.body = { error: "Missing reference_id or status" };
+      return;
+    }
+
+    const newStatus =
+      status === "berhasil" ? "pending_approval" : "pending_dp_payment";
+
+    await execute("UPDATE orders SET status = ? WHERE id = ?", [
+      newStatus,
+      referenceId,
+    ]);
+
+    ctx.response.status = 200;
+    ctx.response.body = "Callback received";
+  } catch (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { error: (error as Error).message };
+  }
+});
+
+router.post("/api/payment/callback-full", async (ctx) => {
+  try {
+    const body = await ctx.request.body({ type: "form" }).value;
+    const referenceId = body.get("reference_id");
+    const status = body.get("status");
+
+    if (!referenceId || !status) {
+      ctx.response.status = 400;
+      ctx.response.body = { error: "Missing reference_id or status" };
+      return;
+    }
+
+    const newStatus = status === "berhasil" ? "completed" : "demo_ready";
+
+    await execute("UPDATE orders SET status = ? WHERE id = ?", [
+      newStatus,
+      referenceId,
+    ]);
+
+    ctx.response.status = 200;
+    ctx.response.body = "Callback received";
+  } catch (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { error: (error as Error).message };
+  }
+});
+export default router;

@@ -1,156 +1,230 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { LogOut, Check, X, ExternalLink, MessageCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useToast } from '@/components/ui/use-toast';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LogOut, Check, X, ExternalLink } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
-const AdminDashboard = () => {
-  const { user, logout } = useAuth();
+interface Order {
+  id: string;
+  user_id: string;
+  service_type: string;
+  description: string;
+  budget: number;
+  status: string;
+  demo_link?: string | null;
+  final_link?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+type OrderWithUser = Order & { user_email?: string };
+
+const AdminDashboard: React.FC = () => {
+  const { user, isAdmin, logout } = useAuth();
   const { toast } = useToast();
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [demoLink, setDemoLink] = useState('');
-  const [finalLink, setFinalLink] = useState('');
-  const [orders, setOrders] = useState<any[]>([]);
+
+  const [orders, setOrders] = useState<OrderWithUser[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // dialog states
+  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
+  const [finalDialogOpen, setFinalDialogOpen] = useState(false);
+  const [activeOrder, setActiveOrder] = useState<OrderWithUser | null>(null);
+  const [demoLink, setDemoLink] = useState("");
+  const [finalLink, setFinalLink] = useState("");
 
   useEffect(() => {
     fetchAllOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchAllOrders = async () => {
+  async function fetchAllOrders() {
     try {
-      const ordersData = await api.get('/orders', user?.token);
-
-      const ordersWithUserInfo = ordersData?.map((order: any) => ({
-        ...order,
-        user_email: order.user_id, // We'll show user_id until we have profiles table
-      })) || [];
-
-      setOrders(ordersWithUserInfo);
-    } catch (error: any) {
+      if (!user?.token) return;
+      setLoading(true);
+      const data = await api.get<OrderWithUser[]>("/admin/orders", user.token);
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err: any) {
       toast({
-        title: 'Error',
-        description: 'Gagal memuat pesanan',
-        variant: 'destructive',
+        title: "Error",
+        description: err?.message || "Gagal memuat pesanan",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const getStatusBadge = (status: string) => {
+  function getStatusBadge(status: string) {
     const statusMap = {
-      'pending_dp_payment': { label: 'Belum Bayar DP', variant: 'destructive' as const },
-      'pending_approval': { label: 'Menunggu Persetujuan', variant: 'secondary' as const },
-      'approved': { label: 'Disetujui - Dikerjakan', variant: 'default' as const },
-      'in_progress': { label: 'Sedang Dikerjakan', variant: 'outline' as const },
-      'demo_ready': { label: 'Demo Siap', variant: 'default' as const },
-      'completed': { label: 'Selesai', variant: 'default' as const }
+      pending_dp_payment: {
+        label: "Belum Bayar DP",
+        variant: "destructive" as const,
+      },
+      pending_approval: {
+        label: "Menunggu Persetujuan",
+        variant: "secondary" as const,
+      },
+      approved: {
+        label: "Disetujui - Dikerjakan",
+        variant: "default" as const,
+      },
+      in_progress: { label: "Sedang Dikerjakan", variant: "outline" as const },
+      demo_ready: { label: "Demo Siap", variant: "default" as const },
+      completed: { label: "Selesai", variant: "default" as const },
+      rejected: { label: "Ditolak", variant: "destructive" as const },
     };
-    return statusMap[status as keyof typeof statusMap] || { label: status, variant: 'secondary' as const };
-  };
+    return (
+      statusMap[status as keyof typeof statusMap] || {
+        label: status,
+        variant: "secondary" as const,
+      }
+    );
+  }
 
-  const handleApproveOrder = async (orderId: string) => {
+  async function handleApproveOrder(orderId: string) {
     try {
-      await api.put(`/orders/${orderId}/status`, { status: 'approved' }, user?.token);
+      await api.put(
+        `/admin/orders/${orderId}/status`,
+        { status: "approved" },
+        user?.token
+      );
+      toast({ title: "Berhasil", description: "Pesanan berhasil disetujui" });
+      await fetchAllOrders();
+    } catch (err: any) {
       toast({
-        title: 'Berhasil',
-        description: 'Pesanan berhasil disetujui',
-      });
-      fetchAllOrders(); // Refresh orders
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: `Gagal menyetujui pesanan: ${error.message}`,
-        variant: 'destructive',
+        title: "Error",
+        description: `Gagal menyetujui pesanan: ${
+          err?.message || "unknown error"
+        }`,
+        variant: "destructive",
       });
     }
-  };
+  }
 
-  const handleRejectOrder = async (orderId: string) => {
+  async function handleRejectOrder(orderId: string) {
     try {
-      await api.put(`/orders/${orderId}/status`, { status: 'rejected' }, user?.token);
+      await api.put(
+        `/admin/orders/${orderId}/status`,
+        { status: "rejected" },
+        user?.token
+      );
+      toast({ title: "Berhasil", description: "Pesanan berhasil ditolak" });
+      await fetchAllOrders();
+    } catch (err: any) {
       toast({
-        title: 'Berhasil',
-        description: 'Pesanan berhasil ditolak',
-      });
-      fetchAllOrders(); // Refresh orders
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: `Gagal menolak pesanan: ${error.message}`,
-        variant: 'destructive',
+        title: "Error",
+        description: `Gagal menolak pesanan: ${
+          err?.message || "unknown error"
+        }`,
+        variant: "destructive",
       });
     }
-  };
+  }
 
-  const handleUpdateDemoLink = async (orderId: string) => {
-    if (!demoLink) {
+  function openDemoDialog(order: OrderWithUser) {
+    setActiveOrder(order);
+    setDemoLink(order.demo_link || "");
+    setDemoDialogOpen(true);
+  }
+
+  function openFinalDialog(order: OrderWithUser) {
+    setActiveOrder(order);
+    setFinalLink(order.final_link || "");
+    setFinalDialogOpen(true);
+  }
+
+  async function handleUpdateDemoLink() {
+    if (!activeOrder) return;
+    if (!demoLink.trim()) {
       toast({
-        title: 'Error',
-        description: 'Link demo tidak boleh kosong',
-        variant: 'destructive',
+        title: "Error",
+        description: "Link demo tidak boleh kosong",
+        variant: "destructive",
       });
       return;
     }
-
     try {
-      await api.put(`/orders/${orderId}`, { demo_link: demoLink, status: 'demo_ready' }, user?.token);
+      // admin endpoint: set demo link + default status demo_ready
+      await api.put(
+        `/admin/orders/${activeOrder.id}/demo`,
+        { demo_link: demoLink, status: "demo_ready" },
+        user?.token
+      );
+      toast({ title: "Berhasil", description: "Link demo berhasil diupdate" });
+      setDemoDialogOpen(false);
+      setActiveOrder(null);
+      setDemoLink("");
+      await fetchAllOrders();
+    } catch (err: any) {
       toast({
-        title: 'Berhasil',
-        description: 'Link demo berhasil diupdate',
-      });
-      setDemoLink('');
-      setSelectedOrder(null);
-      fetchAllOrders(); // Refresh orders
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: `Gagal mengupdate link demo: ${error.message}`,
-        variant: 'destructive',
+        title: "Error",
+        description: `Gagal mengupdate link demo: ${
+          err?.message || "unknown error"
+        }`,
+        variant: "destructive",
       });
     }
-  };
+  }
 
-  const handleUpdateFinalLink = async (orderId: string) => {
-    if (!finalLink) {
+  async function handleUpdateFinalLink() {
+    if (!activeOrder) return;
+    if (!finalLink.trim()) {
       toast({
-        title: 'Error',
-        description: 'Link final tidak boleh kosong',
-        variant: 'destructive',
+        title: "Error",
+        description: "Link final tidak boleh kosong",
+        variant: "destructive",
       });
       return;
     }
-
     try {
-      await api.put(`/orders/${orderId}`, { final_link: finalLink, status: 'completed' }, user?.token);
+      // admin endpoint: set final link (status boleh diubah terpisah via /status)
+      await api.put(
+        `/admin/orders/${activeOrder.id}/final`,
+        { final_link: finalLink },
+        user?.token
+      );
+      toast({ title: "Berhasil", description: "Link final berhasil diupdate" });
+      setFinalDialogOpen(false);
+      setActiveOrder(null);
+      setFinalLink("");
+      await fetchAllOrders();
+    } catch (err: any) {
       toast({
-        title: 'Berhasil',
-        description: 'Link final berhasil diupdate',
-      });
-      setFinalLink('');
-      setSelectedOrder(null);
-      fetchAllOrders(); // Refresh orders
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: `Gagal mengupdate link final: ${error.message}`,
-        variant: 'destructive',
+        title: "Error",
+        description: `Gagal mengupdate link final: ${
+          err?.message || "unknown error"
+        }`,
+        variant: "destructive",
       });
     }
-  };
+  }
 
-  const handleWhatsAppClick = (orderId: string, userEmail: string) => {
-    const message = `Halo! Ini admin dari Crxanode. Mengenai pesanan ${orderId}, mari kita diskusikan lebih lanjut.`;
-    const whatsappUrl = `https://wa.me/6282134567890?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Anda bukan admin.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -178,21 +252,25 @@ const AdminDashboard = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Menunggu Persetujuan</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Menunggu Persetujuan
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(o => o.status === 'pending_approval').length}
+              {orders.filter((o) => o.status === "pending_approval").length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Sedang Dikerjakan</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Sedang Dikerjakan
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(o => o.status === 'in_progress').length}
+              {orders.filter((o) => o.status === "in_progress").length}
             </div>
           </CardContent>
         </Card>
@@ -202,75 +280,113 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              Rp {orders.reduce((total, o) => total + o.budget, 0).toLocaleString('id-ID')}
+              Rp{" "}
+              {orders
+                .reduce((t, o) => t + (o.budget || 0), 0)
+                .toLocaleString("id-ID")}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Orders Management */}
+      {/* Orders */}
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Manajemen Pesanan</h2>
-        
-        {orders.map((order) => {
-          const statusInfo = getStatusBadge(order.status);
-          
-          return (
-            <Card key={order.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {order.id}
-                      <Badge variant={statusInfo.variant}>
-                        {statusInfo.label}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      Customer: {order.user_email} | 
-                      {order.service_type === 'website' ? ' Website' : 
-                       order.service_type === 'whatsapp_bot' ? ' WhatsApp Bot' :
-                       order.service_type === 'ecommerce' ? ' E-commerce' : ` ${order.service_type}`}
-                    </CardDescription>
+
+        {loading && (
+          <Card>
+            <CardContent className="p-8 text-center">Memuat data…</CardContent>
+          </Card>
+        )}
+
+        {!loading && orders.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              Belum ada data pesanan.
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading &&
+          orders.map((order) => {
+            const statusInfo = getStatusBadge(order.status);
+            const hasDemo = !!order.demo_link;
+
+            // Admin boleh tambah/edit demo & final di SEMUA status
+            // kecuali rejected (dan kalau kamu punya 'cancelled' bisa dikecualikan juga).
+            const allowEdit =
+              order.status !== "rejected"; /* && order.status !== "cancelled" */
+
+            return (
+              <Card key={order.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {order.id}
+                        <Badge variant={statusInfo.variant}>
+                          {statusInfo.label}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Customer: {order.user_email || order.user_id} |{" "}
+                        {order.service_type}
+                      </CardDescription>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">
+                        Rp {order.budget.toLocaleString("id-ID")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString("id-ID")}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold">Rp {order.budget.toLocaleString('id-ID')}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleDateString('id-ID')}
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm mb-4">{order.description}</p>
-                
-                <div className="flex flex-wrap gap-2">
-                  {order.status === 'pending_approval' && (
-                    <>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleApproveOrder(order.id)}
+                </CardHeader>
+
+                <CardContent>
+                  <p className="text-sm mb-4">{order.description}</p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {order.status === "pending_approval" && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApproveOrder(order.id)}
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Setujui
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectOrder(order.id)}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Tolak
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Tambah/Edit Demo — SELALU ADA (kecuali rejected) */}
+                    {allowEdit && (
+                      <Dialog
+                        open={demoDialogOpen && activeOrder?.id === order.id}
+                        onOpenChange={(o) => {
+                          setDemoDialogOpen(o);
+                          if (!o) {
+                            setActiveOrder(null);
+                            setDemoLink("");
+                          }
+                        }}
                       >
-                        <Check className="w-4 h-4 mr-1" />
-                        Setujui
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={() => handleRejectOrder(order.id)}
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Tolak
-                      </Button>
-                    </>
-                  )}
-                  
-                  {(order.status === 'approved' || order.status === 'in_progress') && (
-                    <>
-                      <Dialog>
                         <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            {order.demo_link ? 'Update Demo' : 'Tambah Demo'}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDemoDialog(order)}
+                          >
+                            {hasDemo ? "Edit Demo" : "Tambah Demo"}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -281,80 +397,84 @@ const AdminDashboard = () => {
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="demo-link">Link Demo</Label>
-                              <Input
-                                id="demo-link"
-                                value={demoLink}
-                                onChange={(e) => setDemoLink(e.target.value)}
-                                placeholder="https://demo.example.com"
-                              />
-                            </div>
-                            <Button onClick={() => handleUpdateDemoLink(order.id)}>
+                            <Label htmlFor="demo-link">Link Demo</Label>
+                            <Input
+                              id="demo-link"
+                              value={demoLink}
+                              onChange={(e) => setDemoLink(e.target.value)}
+                              placeholder="https://demo.example.com"
+                            />
+                            <Button onClick={handleUpdateDemoLink}>
                               Simpan Link Demo
                             </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
-                      
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleWhatsAppClick(order.id, order.user_email)}
+                    )}
+
+                    {/* Tambah/Edit Final — SELALU ADA (kecuali rejected) */}
+                    {allowEdit && (
+                      <Dialog
+                        open={finalDialogOpen && activeOrder?.id === order.id}
+                        onOpenChange={(o) => {
+                          setFinalDialogOpen(o);
+                          if (!o) {
+                            setActiveOrder(null);
+                            setFinalLink("");
+                          }
+                        }}
                       >
-                        <MessageCircle className="w-4 h-4 mr-1" />
-                        WhatsApp
-                      </Button>
-                    </>
-                  )}
-                  
-                  {order.demo_link && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => window.open(order.demo_link, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Lihat Demo
-                    </Button>
-                  )}
-                  
-                  {order.status === 'demo_ready' && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm">
-                          Tambah Link Final
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Link Final - {order.id}</DialogTitle>
-                          <DialogDescription>
-                            Masukkan link final project yang sudah selesai
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="final-link">Link Final Project</Label>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            onClick={() => openFinalDialog(order)}
+                          >
+                            {order.final_link
+                              ? "Edit Link Final"
+                              : "Tambah Link Final"}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Link Final - {order.id}</DialogTitle>
+                            <DialogDescription>
+                              Masukkan link final project
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <Label htmlFor="final-link">
+                              Link Final Project
+                            </Label>
                             <Input
                               id="final-link"
                               value={finalLink}
                               onChange={(e) => setFinalLink(e.target.value)}
                               placeholder="https://final.example.com"
                             />
+                            <Button onClick={handleUpdateFinalLink}>
+                              Simpan Link Final
+                            </Button>
                           </div>
-                          <Button onClick={() => handleUpdateFinalLink(order.id)}>
-                            Simpan Link Final
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {/* Lihat Demo (bila ada) */}
+                    {order.demo_link && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(order.demo_link!, "_blank")}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        Lihat Demo
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
       </div>
     </div>
   );
