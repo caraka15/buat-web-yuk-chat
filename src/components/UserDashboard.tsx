@@ -30,7 +30,7 @@ type Order = {
   updated_at: string;
 };
 
-const ADMIN_WHATSAPP = "6282134567890"; // ganti sesuai nomor admin
+const ADMIN_WHATSAPP = "6285156371696"; // ganti sesuai nomor admin
 
 const UserDashboard: React.FC = () => {
   const { user, logout } = useAuth(); // ProtectedRoute menjamin user ada
