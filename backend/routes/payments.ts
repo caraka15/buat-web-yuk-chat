@@ -63,7 +63,12 @@ router.post("/payment-dp", async (ctx) => {
       id: string;
       service_type: string;
       budget: number;
-    }>("SELECT * FROM orders WHERE id = ?", [order_id]);
+      name: string;
+      email: string;
+    }>(
+      "SELECT o.id, o.service_type, o.budget, u.name, u.email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?",
+      [order_id]
+    );
 
     if (!order) throw new Error("Order not found");
 
@@ -80,8 +85,8 @@ router.post("/payment-dp", async (ctx) => {
       notifyUrl: `${Deno.env.get("BACKEND_URL")}/api/payment/callback-dp`,
       cancelUrl: `${Deno.env.get("FRONTEND_URL")}/order/${order_id}/cancel`,
       referenceId: order_id,
-      buyerName: "John Doe",
-      buyerEmail: "john@gmail.com",
+      buyerName: order.name,
+      buyerEmail: order.email,
     };
 
     const signature = generateSignature(payload, {
@@ -134,7 +139,12 @@ router.post("/payment-full", async (ctx) => {
       id: string;
       service_type: string;
       budget: number;
-    }>("SELECT * FROM orders WHERE id = ?", [order_id]);
+      name: string;
+      email: string;
+    }>(
+      "SELECT o.id, o.service_type, o.budget, u.name, u.email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?",
+      [order_id]
+    );
 
     if (!order) throw new Error("Order not found");
 
@@ -151,8 +161,8 @@ router.post("/payment-full", async (ctx) => {
       notifyUrl: `${Deno.env.get("BACKEND_URL")}/api/payment/callback-full`,
       cancelUrl: `${Deno.env.get("FRONTEND_URL")}/order/${order_id}/cancel`,
       referenceId: order_id,
-      buyerName: "John Doe",
-      buyerEmail: "john@gmail.com",
+      buyerName: order.name,
+      buyerEmail: order.email,
     };
 
     const signature = generateSignature(payload, {
