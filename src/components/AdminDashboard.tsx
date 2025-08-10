@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogOut, Check, X, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ type OrderWithUser = Order & { user_email?: string };
 
 const AdminDashboard: React.FC = () => {
   const { user, isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [orders, setOrders] = useState<OrderWithUser[]>([]);
@@ -234,10 +236,13 @@ const AdminDashboard: React.FC = () => {
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Kelola pesanan dan proyek</p>
         </div>
-        <Button variant="outline" onClick={logout}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Keluar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/admin/users")}>Kelola User</Button>
+          <Button variant="outline" onClick={logout}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Keluar
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
