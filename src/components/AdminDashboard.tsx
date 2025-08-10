@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { LogOut, Check, X, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -45,6 +52,8 @@ const AdminDashboard: React.FC = () => {
 
   const [orders, setOrders] = useState<OrderWithUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // dialog states
   const [demoDialogOpen, setDemoDialogOpen] = useState(false);
@@ -52,6 +61,19 @@ const AdminDashboard: React.FC = () => {
   const [activeOrder, setActiveOrder] = useState<OrderWithUser | null>(null);
   const [demoLink, setDemoLink] = useState("");
   const [finalLink, setFinalLink] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orders.filter((o) => {
+      const matchStatus = statusFilter === "all" || o.status === statusFilter;
+      const matchSearch =
+        !q ||
+        o.id.toLowerCase().includes(q) ||
+        (o.user_email?.toLowerCase() || "").includes(q) ||
+        o.service_type.toLowerCase().includes(q);
+      return matchStatus && matchSearch;
+    });
+  }, [orders, search, statusFilter]);
 
   useEffect(() => {
     fetchAllOrders();
@@ -298,13 +320,35 @@ const AdminDashboard: React.FC = () => {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Manajemen Pesanan</h2>
 
+        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+          <Input
+            placeholder="Cari pesanan..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="md:w-1/3"
+          />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="md:w-48">
+              <SelectValue placeholder="Semua Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="pending_approval">Menunggu Persetujuan</SelectItem>
+              <SelectItem value="in_progress">Sedang Dikerjakan</SelectItem>
+              <SelectItem value="demo_ready">Demo Siap</SelectItem>
+              <SelectItem value="completed">Selesai</SelectItem>
+              <SelectItem value="rejected">Ditolak</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {loading && (
           <Card>
             <CardContent className="p-8 text-center">Memuat data…</CardContent>
           </Card>
         )}
 
-        {!loading && orders.length === 0 && (
+        {!loading && filteredOrders.length === 0 && (
           <Card>
             <CardContent className="p-8 text-center">
               Belum ada data pesanan.
@@ -313,7 +357,7 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {!loading &&
-          orders.map((order) => {
+          filteredOrders.map((order) => {
             const statusInfo = getStatusBadge(order.status);
             const hasDemo = !!order.demo_link;
 

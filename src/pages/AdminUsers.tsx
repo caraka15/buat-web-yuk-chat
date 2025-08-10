@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -22,6 +23,17 @@ const AdminUsers: React.FC = () => {
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return users.filter(
+      (u) =>
+        !q ||
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q),
+    );
+  }, [users, query]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -92,11 +104,22 @@ const AdminUsers: React.FC = () => {
         </div>
       </div>
 
+      <div className="mb-4">
+        <Input
+          placeholder="Cari user..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="md:w-1/3"
+        />
+      </div>
+
       {loading ? (
         <p>Memuat...</p>
+      ) : filteredUsers.length === 0 ? (
+        <p>Tidak ada user ditemukan.</p>
       ) : (
         <div className="space-y-4">
-          {users.map((u) => (
+          {filteredUsers.map((u) => (
             <Card key={u.id}>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
