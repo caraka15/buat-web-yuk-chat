@@ -34,7 +34,6 @@ CREATE TABLE payments (
     ipaymu_session_id TEXT,
     ipaymu_transaction_id TEXT,
     payment_url TEXT,
-    va_number TEXT,
     status VARCHAR(255) DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -7,6 +7,7 @@ import orderRouter from "./routes/orders.ts";
 import paymentRouter from "./routes/payments.ts";
 import meRouter from "./routes/me.ts";
 import adminOrdersRouter from "./routes/adminOrders.ts";
+import adminUsersRouter from "./routes/adminUsers.ts";
 
 const PORT = Deno.env.get("PORT");
 
@@ -42,6 +43,9 @@ router.get("/", (context) => {
 
 app.use(adminOrdersRouter.routes());
 app.use(adminOrdersRouter.allowedMethods());
+
+app.use(adminUsersRouter.routes());
+app.use(adminUsersRouter.allowedMethods());
 
 app.use(meRouter.routes());
 app.use(meRouter.allowedMethods());
