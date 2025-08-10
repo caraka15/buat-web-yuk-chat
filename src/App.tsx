@@ -10,6 +10,7 @@ import Legal from "./pages/Legal";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminUsers from "./pages/AdminUsers";
+import PaymentHistory from "./pages/PaymentHistory";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -39,6 +40,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <ProtectedRoute>
+                  <PaymentHistory />
                 </ProtectedRoute>
               }
             />

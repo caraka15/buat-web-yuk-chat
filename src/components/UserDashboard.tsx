@@ -14,7 +14,7 @@ import CreateOrderDialog from "@/components/CreateOrderDialog";
 import PaymentDialog from "@/components/PaymentDialog";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type Order = {
   id: string;
@@ -36,6 +36,7 @@ const UserDashboard: React.FC = () => {
   const { user, logout } = useAuth(); // ProtectedRoute menjamin user ada
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<{
@@ -151,6 +152,9 @@ const UserDashboard: React.FC = () => {
           <Button onClick={() => setShowCreateOrder(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Buat Pesanan
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/payments")}> 
+            Riwayat Pembayaran
           </Button>
           <Button variant="outline" onClick={logout}>
             <LogOut className="w-4 h-4 mr-2" />

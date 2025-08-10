@@ -3,6 +3,12 @@ import { Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
 import { query, execute } from "../db.ts";
 import { createHash, createHmac } from "node:crypto";
 import { Buffer } from "node:buffer";
+import {
+  createPayment,
+  updatePaymentByOrder,
+  getPaymentsByUserId,
+} from "../services/paymentService.ts";
+import { getUserIdFromHeader } from "../middlewares/auth.ts";
 
 const router = new Router();
 
@@ -34,6 +40,20 @@ function generateSignature(
   const hmac = createHmac("sha256", credentials.apiKey);
   return hmac.update(Buffer.from(stringToSign, "utf-8")).digest("hex");
 }
+
+router.get("/payments", async (ctx) => {
+  try {
+    const authHeader = ctx.request.headers.get("Authorization");
+    const userId = await getUserIdFromHeader(authHeader);
+    const payments = await getPaymentsByUserId(userId);
+    ctx.response.status = 200;
+    ctx.response.body = payments;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ctx.response.status = message === "Unauthorized" ? 401 : 500;
+    ctx.response.body = { error: message };
+  }
+});
 
 router.post("/payment-dp", async (ctx) => {
   try {
@@ -86,6 +106,13 @@ router.post("/payment-dp", async (ctx) => {
     if (data.Status !== 200 || !data.Data?.SessionID || !data.Data?.Url) {
       throw new Error("iPaymu Error: " + (data?.Message || "Unknown"));
     }
+    await createPayment({
+      order_id,
+      payment_type: "dp",
+      amount: dpAmount,
+      ipaymu_session_id: data.Data.SessionID,
+      payment_url: data.Data.Url,
+    });
 
     ctx.response.status = 200;
     ctx.response.body = {
@@ -150,6 +177,13 @@ router.post("/payment-full", async (ctx) => {
     if (data.Status !== 200 || !data.Data?.SessionID || !data.Data?.Url) {
       throw new Error("iPaymu Error: " + (data?.Message || "Unknown"));
     }
+    await createPayment({
+      order_id,
+      payment_type: "full",
+      amount: fullAmount,
+      ipaymu_session_id: data.Data.SessionID,
+      payment_url: data.Data.Url,
+    });
 
     ctx.response.status = 200;
     ctx.response.body = {
@@ -183,6 +217,10 @@ router.post("/api/payment/callback-dp", async (ctx) => {
       referenceId,
     ]);
 
+    const paymentStatus = status === "berhasil" ? "success" : "failed";
+    const trxId = body.get("trx_id");
+    await updatePaymentByOrder(referenceId, "dp", paymentStatus, trxId);
+
     ctx.response.status = 200;
     ctx.response.body = "Callback received";
   } catch (error) {
@@ -209,6 +247,10 @@ router.post("/api/payment/callback-full", async (ctx) => {
       newStatus,
       referenceId,
     ]);
+
+    const paymentStatus = status === "berhasil" ? "success" : "failed";
+    const trxId = body.get("trx_id");
+    await updatePaymentByOrder(referenceId, "full", paymentStatus, trxId);
 
     ctx.response.status = 200;
     ctx.response.body = "Callback received";
