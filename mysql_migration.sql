@@ -44,4 +44,4 @@ CREATE TABLE payments (
 -- Insert admin user
 -- You can use a tool like bcrypt to generate the hash.
 INSERT INTO users (id, email, password_hash, is_admin) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'carakawidi07@gmail.com', 'YOUR_HASHED_PASSWORD_HERE', TRUE);
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin@gmail.com', 'YOUR_HASHED_PASSWORD_HERE', TRUE);
