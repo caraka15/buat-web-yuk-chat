@@ -6,7 +6,7 @@ const client = await new Client().connect({
   hostname: Deno.env.get("DB_HOST") ?? "127.0.0.1",
   username: Deno.env.get("DB_USER") ?? "root",
   db: Deno.env.get("DB_NAME") ?? "shop",
-  password: Deno.env.get("DB_PASSWORD") ?? "caraka1717",
+  password: Deno.env.get("DB_PASSWORD") ?? "",
 });
 
 // Untuk SELECT
