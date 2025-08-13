@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Legal from "./pages/Legal";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import HandDetection from "./pages/HandDetection";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/legal" element={<Legal />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/hand-detection" element={<HandDetection />} />
             <Route
               path="/dashboard"
               element={

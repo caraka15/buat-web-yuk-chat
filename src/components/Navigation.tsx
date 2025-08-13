@@ -61,6 +61,12 @@ const Navigation = () => {
               FAQ
             </button>
             <button 
+              onClick={() => navigate('/hand-detection')}
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              Deteksi Angka
+            </button>
+            <button 
               onClick={() => scrollToSection('contact')}
               className="text-foreground hover:text-primary transition-colors"
             >
@@ -118,6 +124,12 @@ const Navigation = () => {
                 className="text-left text-foreground hover:text-primary transition-colors py-2"
               >
                 FAQ
+              </button>
+              <button 
+                onClick={() => navigate('/hand-detection')}
+                className="text-left text-foreground hover:text-primary transition-colors py-2"
+              >
+                Deteksi Angka
               </button>
               <button 
                 onClick={() => scrollToSection('contact')}
